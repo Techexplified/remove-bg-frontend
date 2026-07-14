@@ -1,0 +1,32 @@
+{
+  "name": "removebg-figma-plugin",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "build": "npm run build:ui && npm run build:plugin",
+    "build:ui": "vite build --config vite.config.ts",
+    "build:plugin": "tsc -p tsconfig.plugin.json",
+    "dev": "concurrently \"npm run watch:ui\" \"npm run watch:plugin\"",
+    "watch:ui": "vite build --config vite.config.ts --watch",
+    "watch:plugin": "tsc -p tsconfig.plugin.json --watch",
+    "typecheck": "tsc -p tsconfig.ui.json --noEmit && tsc -p tsconfig.plugin.json --noEmit"
+  },
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.3.0",
+    "framer-motion": "^11.11.0",
+    "lucide-react": "^0.460.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-redux": "^9.1.2"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.103.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "vite-plugin-singlefile": "^2.1.0"
+  }
+}

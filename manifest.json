@@ -1,0 +1,16 @@
+{
+  "name": "RemoveBG",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/ui.html",
+  "editorType": ["figma"],
+  "permissions": ["currentuser"],
+  "networkAccess": {
+    "allowedDomains": [
+      "https://removebgapi-pf6diz22ka-uc.a.run.app",
+      "https://*.ngrok-free.dev",
+      "https://explified.com"
+    ],
+    "reasoning": "Connects to RemoveBG backend for plan status, image processing, and checkout."
+  }
+}
