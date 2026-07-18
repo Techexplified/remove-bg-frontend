@@ -1,0 +1,18 @@
+{
+  "name": "ZeroBG - Background Remover and AI Image Editor",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/ui.html",
+  "id": "1643987146382893434",
+  "editorType": ["figma"],
+  "permissions": ["currentuser"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": [
+      "https://removebgapi-pf6diz22ka-uc.a.run.app",
+      "https://*.ngrok-free.dev",
+      "https://explified.com"
+    ],
+    "reasoning": "Connects to ZeroBG backend for plan status, image processing, and checkout."
+  }
+}

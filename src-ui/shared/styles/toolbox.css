@@ -1,0 +1,439 @@
+/* ──────────────────────────────────────────────────────────
+   Toolbox Editor Canvas
+   ────────────────────────────────────────────────────────── */
+.toolbox-preview {
+  position: relative;
+  width: 100%;
+  flex: 1;           /* grow to fill all remaining space */
+  min-height: 90px;  /* never collapse smaller than this */
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: #0f0c18;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Fix #1 & #8 — full-size background layer behind the image */
+.toolbox-preview-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  transition: background 0.2s ease, background-color 0.2s ease;
+}
+
+/* Image wrapper — fills the full preview area, above the background layer */
+.toolbox-preview-img-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toolbox-preview-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  animation: fade-in 0.2s ease;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+@keyframes fade-in {
+  from { opacity: 0.4; }
+  to   { opacity: 1; }
+}
+
+/* Fix #3 — applying spinner overlay */
+.toolbox-preview-applying {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: rgba(15, 12, 24, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+@keyframes toolbox-spin {
+  to { transform: rotate(360deg); }
+}
+
+.toolbox-applying-spinner {
+  animation: toolbox-spin 0.7s linear infinite;
+}
+
+/* ──────────────────────────────────────────────────────────
+   Zoom bar
+   ────────────────────────────────────────────────────────── */
+.toolbox-preview-zoom {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 5;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 100px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.toolbox-preview-zoom button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.toolbox-preview-zoom button:hover {
+  opacity: 0.8;
+}
+
+/* ──────────────────────────────────────────────────────────
+   Dimensions badge
+   ────────────────────────────────────────────────────────── */
+.toolbox-preview-dims {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e5e7eb;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 100px;
+  backdrop-filter: blur(8px);
+}
+
+/* ──────────────────────────────────────────────────────────
+   Original / Result toggle
+   ────────────────────────────────────────────────────────── */
+.toolbox-preview-toggle {
+  position: absolute;
+  bottom: 10px;
+  z-index: 5;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 100px;
+  padding: 3px;
+  display: flex;
+  gap: 3px;
+  backdrop-filter: blur(8px);
+}
+.preview-toggle-btn {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4.5px 12px;
+  border-radius: 100px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.12s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.preview-toggle-btn.active-result {
+  background: var(--brand);
+  color: white;
+}
+.preview-toggle-dot {
+  width: 5px;
+  height: 5px;
+  background: white;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* Empty state */
+.toolbox-preview-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--c-text-3);
+  font-size: 11px;
+  text-align: center;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ──────────────────────────────────────────────────────────
+   Sections
+   ────────────────────────────────────────────────────────── */
+.toolbox-section {
+  margin-bottom: 8px;
+}
+.toolbox-section-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--c-text);
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ──────────────────────────────────────────────────────────
+   Replace Background Presets
+   ────────────────────────────────────────────────────────── */
+.bg-presets {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: nowrap; /* 34px×10 + 6px×9 = 394px < 448px — fits 1 row */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.bg-presets::-webkit-scrollbar { display: none; }
+.bg-preset {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 2.5px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  transition: all 0.12s;
+  box-shadow: var(--c-shadow);
+  flex-shrink: 0;
+}
+.bg-preset:hover {
+  transform: translateY(-2px);
+}
+.bg-preset.active {
+  border-color: var(--brand);
+  transform: translateY(-2px);
+}
+/* Fix #8 — transparent preset uses the checkerboard pattern */
+.bg-preset-transparent {
+  background-image:
+    linear-gradient(45deg, #e5e7eb 25%, transparent 25%),
+    linear-gradient(-45deg, #e5e7eb 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e5e7eb 75%),
+    linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+  background-color: #ffffff;
+}
+
+/* ──────────────────────────────────────────────────────────
+   Colors from Image
+   ────────────────────────────────────────────────────────── */
+.image-colors {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.color-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.12s;
+  box-shadow: var(--c-shadow);
+  flex-shrink: 0;
+}
+.color-circle:hover {
+  transform: scale(1.12);
+}
+.color-circle.active {
+  border-color: var(--brand);
+  transform: scale(1.12);
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+
+/* ──────────────────────────────────────────────────────────
+   Sliders
+   ────────────────────────────────────────────────────────── */
+.slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.slider-label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--c-text-2);
+  width: 70px;
+  flex-shrink: 0;
+}
+.slider-input {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--c-border);
+  appearance: none;
+  cursor: pointer;
+}
+.slider-input::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--brand);
+  cursor: pointer;
+  border: 2px solid var(--c-bg);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+.slider-val-box {
+  width: 34px;
+  height: 20px;
+  background: var(--c-bg-2);
+  border: 1px solid var(--c-border);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--c-text);
+  flex-shrink: 0;
+}
+
+/* ──────────────────────────────────────────────────────────
+   Footer + no-selection warning
+   ────────────────────────────────────────────────────────── */
+.toolbox-footer {
+  margin-top: 8px;
+}
+
+/* Fix #7 — warning shown when no layer is selected */
+.toolbox-no-selection-warn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--c-text-3);
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 8px;
+}
+
+/* Refine Edges (kept for compatibility with tool components) */
+.refine-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.refine-btn {
+  background: #ffffff;
+  border: 1.5px solid var(--c-border);
+  color: var(--c-text-2);
+  padding: 8px 6px;
+  border-radius: var(--radius);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all 0.12s;
+}
+.refine-btn:hover {
+  background: var(--c-bg-2);
+  border-color: var(--c-border-2);
+}
+.refine-btn.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: white;
+}
+
+/* ── Image Filters section ─────────────────────────────────────────────────── */
+.filter-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none; /* Firefox */
+}
+.filter-row::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.filter-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  background: var(--c-bg-2);
+  border: 2px solid var(--c-border);
+  border-radius: 8px;
+  padding: 4px 5px 4px;
+  cursor: pointer;
+  transition: all 0.12s;
+  min-width: 46px;
+}
+.filter-chip:hover {
+  border-color: var(--brand-border);
+  background: var(--c-bg-3);
+  transform: translateY(-1px);
+}
+.filter-chip.active {
+  border-color: var(--brand);
+  background: var(--brand-bg);
+}
+
+/* Swatch — a gradient strip that the CSS filter is applied to, giving a hint */
+.filter-chip-swatch {
+  width: 34px;
+  height: 20px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, #f59e0b 0%, #3b82f6 50%, #16a34a 100%);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.filter-chip-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--c-text-2);
+  text-align: center;
+  line-height: 1;
+  white-space: nowrap;
+}
+.filter-chip.active .filter-chip-label {
+  color: var(--brand);
+}
+
