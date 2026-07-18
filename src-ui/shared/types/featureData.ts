@@ -8,10 +8,10 @@ export const PRIMARY_FEATURE: FeatureDef = {
 export const STARTER_FEATURES: FeatureDef[] = [
   { id: "crop_resize", label: "Crop and Resize", description: "Resize to any dimension", icon: "Crop", credits: 1, needsInputImage: true, needsPrompt: false, minPlan: "starter", needsOutputSize: true },
   { id: "color_background_fill", label: "Color Background", description: "Add a solid color backdrop", icon: "Palette", credits: 1, needsInputImage: true, needsPrompt: false, minPlan: "starter", needsColor: true, badge: "Popular" },
-  { id: "hd_export", label: "HD Export", description: "High-resolution output", icon: "FileOutput", credits: 5, needsInputImage: true, needsPrompt: false, minPlan: "starter", needsOutputSize: true },
 ];
 
 export const PRO_FEATURES: FeatureDef[] = [
+  { id: "hd_export", label: "HD Export", description: "High-resolution output", icon: "FileOutput", credits: 5, needsInputImage: true, needsPrompt: false, minPlan: "pro", needsOutputSize: true },
   { id: "ai_background", label: "AI Background", description: "Generate AI scene backgrounds", icon: "Layers", credits: 5, needsInputImage: true, needsPrompt: false, minPlan: "pro", needsOutputSize: true, badge: "New" },
   { id: "ai_shadows", label: "AI Shadows", description: "Add realistic drop shadows", icon: "Sun", credits: 5, needsInputImage: true, needsPrompt: false, minPlan: "pro", needsOutputSize: true },
   { id: "ai_relighting", label: "AI Relighting", description: "Change lighting and mood", icon: "Lightbulb", credits: 5, needsInputImage: true, needsPrompt: false, minPlan: "pro", needsOutputSize: true, badge: "Popular" },

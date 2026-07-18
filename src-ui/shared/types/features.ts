@@ -45,7 +45,7 @@ export interface ProcessingState {
 
 export type SectionId = "features" | "toolbox" | "account" | "help" | "legal";
 
-export type ModalKind = "none" | "topup" | "plan_picker" | "prompt" | "options" | "coming_soon";
+export type ModalKind = "none" | "topup" | "plan_picker" | "prompt" | "options" | "coming_soon" | "feature_preview";
 
 export interface Toast {
   id: string;

@@ -13,6 +13,7 @@ import { PlanPickerModal } from "./shared/components/modals/PlanPickerModal";
 import { PromptModal } from "./shared/components/modals/PromptModal";
 import { FeatureOptionsModal } from "./shared/components/modals/FeatureOptionsModal";
 import { ComingSoonModal } from "./shared/components/modals/ComingSoonModal";
+import { FeaturePreviewModal } from "./shared/components/modals/FeaturePreviewModal";
 import { FeaturesScreen } from "./features/features-screen/FeaturesScreen";
 import { ToolboxScreen } from "./features/toolbox/ToolboxScreen";
 import { AccountScreen } from "./features/account/AccountScreen";
@@ -396,6 +397,7 @@ function AppReady() {
       {modal.kind === "prompt" && <PromptModal onSubmit={handlePromptSubmit} />}
       {modal.kind === "options" && <FeatureOptionsModal onSubmit={handleOptionsSubmit} />}
       {modal.kind === "coming_soon" && <ComingSoonModal />}
+      {modal.kind === "feature_preview" && <FeaturePreviewModal />}
     </>
   );
 }

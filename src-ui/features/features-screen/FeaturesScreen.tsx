@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback } from "react";
-import { ChevronRight, Sparkles, Crop, Palette, FileOutput, Layers, Sun, Lightbulb, ZoomIn, Wand2, PenTool, Upload, X, Image } from "lucide-react";
+import { ChevronRight, Sparkles, Crop, Palette, FileOutput, Layers, Sun, Lightbulb, ZoomIn, Wand2, PenTool, Upload, X, Image, Eye } from "lucide-react";
 import type { LucideProps } from "lucide-react";
 import type { FC } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
@@ -266,6 +266,7 @@ export function FeaturesScreen({ onRunFeature, onManagePlan, onTopUp, watching, 
           spendable={spendable}
           isBusy={isBusy}
           onFeatureClick={handleFeatureClick}
+          onPreviewClick={(fId) => dispatch(openModal({ kind: "feature_preview", featureId: fId as any }))}
           FeatureIcon={FeatureIcon}
         />
         <FeatureGroup
@@ -284,7 +285,7 @@ export function FeaturesScreen({ onRunFeature, onManagePlan, onTopUp, watching, 
   );
 }
 
-function FeatureGroup({ label, dotColor, plan, proLocked, features, spendable, isBusy, onFeatureClick, FeatureIcon }: {
+function FeatureGroup({ label, dotColor, plan, proLocked, features, spendable, isBusy, onFeatureClick, onPreviewClick, FeatureIcon }: {
   label: string;
   dotColor: string;
   plan: string;
@@ -293,6 +294,7 @@ function FeatureGroup({ label, dotColor, plan, proLocked, features, spendable, i
   spendable: number;
   isBusy: boolean;
   onFeatureClick: (f: FeatureDef) => void;
+  onPreviewClick?: (featureId: string) => void;
   FeatureIcon: (p: { name: string; size?: number }) => JSX.Element | null;
 }) {
   const included = PLAN_RANK[plan] >= PLAN_RANK[label.toLowerCase()];
@@ -349,15 +351,24 @@ function FeatureGroup({ label, dotColor, plan, proLocked, features, spendable, i
               </div>
             </div>
             <div className="feature-row-right">
+              {onPreviewClick && (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onPreviewClick(f.id); }}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: "4px",
+                    height: "24px", borderRadius: "6px", padding: "0 8px",
+                    background: "rgba(108,71,255,0.08)", color: "var(--brand)",
+                    border: "none", cursor: "pointer", marginRight: "6px",
+                    fontSize: "10px", fontWeight: "600"
+                  }}
+                  title="Preview Feature"
+                >
+                  <Eye size={12} /> Preview
+                </button>
+              )}
               {isComingSoon ? (
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", background: "rgba(108,71,255,.08)", color: "var(--c-text-3)", padding: "3.5px 8px", borderRadius: "100px", fontSize: "8.5px", fontWeight: "700" }}>
                   🔒 SOON
-                </span>
-              ) : f.id === "remove_bg_basic" ? (
-                <span className="badge badge-free">Free</span>
-              ) : !unlocked ? (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: "2px", background: "var(--brand)", color: "white", padding: "3.5px 8px", borderRadius: "100px", fontSize: "8.5px", fontWeight: "700" }}>
-                  ★ PRO
                 </span>
               ) : (
                 <ChevronRight size={14} color="var(--c-text-3)" />
