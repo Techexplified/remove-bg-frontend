@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Provider } from "react-redux";
 import { store } from "./app/store";
 import { useAppDispatch, useAppSelector } from "./app/hooks";
-import { setProcessing, addToast, removeToast, openModal, setLastRun, setCheckoutOverlay } from "./app/slices/uiSlice";
+import { setProcessing, addToast, removeToast, openModal, setLastRun, setCheckoutOverlay, incrementUseCount } from "./app/slices/uiSlice";
 import { CheckoutOverlay } from "./shared/components/CheckoutOverlay";
 import { Sidebar } from "./shared/components/Sidebar";
 import { ProcessingOverlay } from "./shared/components/ProcessingOverlay";
@@ -19,6 +19,9 @@ import { ToolboxScreen } from "./features/toolbox/ToolboxScreen";
 import { AccountScreen } from "./features/account/AccountScreen";
 import { HelpScreen } from "./features/help/HelpScreen";
 import { LegalScreen } from "./features/legal/LegalScreen";
+import { SettingsScreen } from "./features/settings/SettingsScreen";
+import { ExitIntentQuestion } from "./shared/components/feedback/ExitIntentQuestion";
+import { ReviewPrompt } from "./shared/components/feedback/ReviewPrompt";
 import { usePluginBridge } from "./shared/hooks/usePluginBridge";
 import { useCheckoutWatcher } from "./shared/hooks/useCheckoutWatcher";
 import { loadPlanStatus, deductCredits } from "./app/slices/statusSlice";
@@ -87,6 +90,7 @@ function AppReady() {
 
   const bridge = usePluginBridge();
   const lastFeatureRef = useRef<FeatureDef | null>(null);
+  const lastInputBytesRef = useRef<Uint8Array | null>(null);
 
   const spendable = !status ? 0
     : status.credits + (status.plan === "pro" ? status.topupCreditsPro : status.topupCreditsStarter);
@@ -119,6 +123,7 @@ function AppReady() {
           imageBytes = await bridge.exportSelectedImage();
         }
         if (imageBytes) {
+          lastInputBytesRef.current = imageBytes;
           const blob = new Blob([imageBytes], { type: "image/png" });
           dispatch(setOriginalUrl(URL.createObjectURL(blob)));
         }
@@ -190,10 +195,10 @@ function AppReady() {
         targetSub,
         extraBullets,
       }));
-      // Optimistically deduct credits immediately so the hero card updates right away.
-      // We do not re-fetch /status here because the client-side deduction is already accurate,
-      // and fetching /status immediately or shortly after can race with the backend database commit,
-      // causing the credits to temporarily revert to the old value.
+
+      // Increment successful feature use count (for 3rd-use review prompt)
+      dispatch(incrementUseCount());
+
       if (status.credits >= feature.credits && feature.credits > 0) {
         dispatch(deductCredits(feature.credits));
       }
@@ -378,14 +383,18 @@ function AppReady() {
               onStopWatching={checkoutWatcher.stop}
             />
           )}
+          {activeSection === "settings" && <SettingsScreen />}
           {activeSection === "help" && <HelpScreen openExternal={bridge.openExternal} />}
           {activeSection === "legal" && <LegalScreen openExternal={bridge.openExternal} />}
         </motion.div>
       </AnimatePresence>
 
-      <ProcessingOverlay onRetry={handleRetryLast} />
+      <ProcessingOverlay onRetry={handleRetryLast} originalBytes={lastInputBytesRef.current} />
       <ToastStack onRetry={handleRetryLast} />
       <CheckoutOverlay />
+
+      <ExitIntentQuestion />
+      <ReviewPrompt openExternal={bridge.openExternal} />
 
       {modal.kind === "topup" && <TopUpModal onCheckoutOpen={handleCheckoutOpen} />}
       {modal.kind === "plan_picker" && (

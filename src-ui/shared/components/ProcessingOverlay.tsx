@@ -2,10 +2,14 @@ import { Loader2, Check, X, Upload, Wand2, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { setProcessing, setSection } from "../../app/slices/uiSlice";
+import { QuickRating } from "./feedback/QuickRating";
+import { AiTrialInvite } from "./feedback/AiTrialInvite";
+import type { FeatureId } from "../types/api";
 
-export function ProcessingOverlay({ onRetry }: { onRetry: () => void }) {
+export function ProcessingOverlay({ onRetry, originalBytes }: { onRetry: () => void; originalBytes?: Uint8Array | null }) {
   const dispatch = useAppDispatch();
   const processing = useAppSelector(s => s.ui.processing);
+  const lastRunFeatureId = useAppSelector(s => s.ui.lastRunFeatureId);
   const { stage, progress, featureLabel, errorMessage, refunded, originalSize, targetSize, originalSub, targetSub, extraBullets } = processing;
 
   if (stage === "idle") return null;
@@ -53,6 +57,8 @@ export function ProcessingOverlay({ onRetry }: { onRetry: () => void }) {
     desc = errorMessage ?? "Something went wrong. Your credits have not been deducted.";
     icon = <X size={22} />;
   }
+
+  const currentFeatureId: FeatureId = lastRunFeatureId ?? "remove_bg_basic";
 
   return (
     <AnimatePresence>
@@ -122,13 +128,23 @@ export function ProcessingOverlay({ onRetry }: { onRetry: () => void }) {
 
           <div className="proc-actions">
             {isSuccess && (
-              <div style={{ display: "flex", gap: "8px", width: "100%" }}>
-                <button className="proc-btn proc-btn-success" style={{ flex: 1 }} onClick={() => dispatch(setProcessing({ stage: "idle" }))}>
-                  <Check size={13} />Done
-                </button>
-                <button className="proc-btn proc-btn-success-outline" style={{ flex: 1 }} onClick={() => { dispatch(setSection("toolbox")); dispatch(setProcessing({ stage: "idle" })); }}>
-                  <Wand2 size={13} />Edit Result
-                </button>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "100%" }}>
+                <div style={{ display: "flex", gap: "8px", width: "100%" }}>
+                  <button className="proc-btn proc-btn-success" style={{ flex: 1 }} onClick={() => dispatch(setProcessing({ stage: "idle" }))}>
+                    <Check size={13} />Done
+                  </button>
+                  <button className="proc-btn proc-btn-success-outline" style={{ flex: 1 }} onClick={() => { dispatch(setSection("toolbox")); dispatch(setProcessing({ stage: "idle" })); }}>
+                    <Wand2 size={13} />Edit Result
+                  </button>
+                </div>
+
+                {/* Free AI Trial invite (only after remove_bg_basic) */}
+                {currentFeatureId === "remove_bg_basic" && (
+                  <AiTrialInvite originalImageBytes={originalBytes ?? null} />
+                )}
+
+                {/* Quick Rating widget */}
+                <QuickRating featureId={currentFeatureId} onRetry={onRetry} />
               </div>
             )}
             {isError && (

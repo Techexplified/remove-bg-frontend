@@ -1,4 +1,4 @@
-import type { FeatureId, PlanStatus, ManagePlanUrls, CheckoutResponse, PackId, RunFeatureOptions } from "../types/api";
+import type { FeatureId, PlanStatus, ManagePlanUrls, CheckoutResponse, PackId, RunFeatureOptions, FeedbackPayload, PreferencesPayload } from "../types/api";
 
 // Confirmed against the handoff doc — the single source of truth for the base URL.
 const API_BASE_URL = "https://removebgapi-pf6diz22ka-uc.a.run.app";
@@ -32,12 +32,29 @@ function getFigmaDisplayName(): string {
   return (window as unknown as { __figmaDisplayName?: string }).__figmaDisplayName ?? "";
 }
 
-async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
+async function apiFetch(path: string, options: RequestInit = {}, isRetry = false): Promise<Response> {
   const headers = new Headers(options.headers);
   headers.set("x-figma-user-id", getFigmaUserId());
   headers.set("x-figma-display-name", getFigmaDisplayName()); // required by backend
   if (cachedSessionToken) headers.set("Authorization", `Bearer ${cachedSessionToken}`);
-  return fetch(`${API_BASE_URL}${path}`, { ...options, headers, cache: "no-store" });
+
+  const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers, cache: "no-store" });
+
+  // ── Section A3: Token Lifecycle 401 auto-retry ──
+  if (response.status === 401 && !isRetry && !path.includes("/api/subscription/status")) {
+    try {
+      await fetchPlanStatus();
+      const retryHeaders = new Headers(options.headers);
+      retryHeaders.set("x-figma-user-id", getFigmaUserId());
+      retryHeaders.set("x-figma-display-name", getFigmaDisplayName());
+      if (cachedSessionToken) retryHeaders.set("Authorization", `Bearer ${cachedSessionToken}`);
+      return fetch(`${API_BASE_URL}${path}`, { ...options, headers: retryHeaders, cache: "no-store" });
+    } catch {
+      return response;
+    }
+  }
+
+  return response;
 }
 
 export class ApiError extends Error {
@@ -77,6 +94,11 @@ export async function fetchPlanStatus(): Promise<PlanStatus> {
     scheduledCancelAt: d.scheduled_cancel_at ?? null,
     sessionToken: d.sessionToken ?? "",
     featuresLocked: d.features_locked === true,
+    // AI Trial + Feedback fields
+    aiTrialUsed: d.ai_trial_used ?? false,
+    featureInterests: Array.isArray(d.feature_interests) ? d.feature_interests : [],
+    feedbackPromptsEnabled: d.feedback_prompts_enabled ?? true,
+    reviewPromptShown: d.review_prompt_shown ?? false,
   };
   if (status.sessionToken) storeSessionToken(status.sessionToken);
   return status;
@@ -229,5 +251,48 @@ export async function reactivateSubscription(): Promise<{ reactivated: boolean; 
     reactivated: d.reactivated ?? false,
     message: d.message ?? "",
   };
+}
+
+// ---- AI Trial ----
+
+export async function runAiTrial(imageBytes: Uint8Array): Promise<Uint8Array> {
+  const response = await apiFetch("/api/features/ai-trial", {
+    method: "POST",
+    headers: { "Content-Type": "application/octet-stream" },
+    body: new Blob([imageBytes as unknown as ArrayBufferView<ArrayBuffer>]),
+  });
+  if (!response.ok) {
+    const e = await parseError(response);
+    if (e.code === "trial_already_used")
+      throw new ApiError("You've already used your free AI trial.", response.status, e.code);
+    throw new ApiError(e.message, response.status, e.code);
+  }
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+// ---- Feedback ----
+
+export async function submitFeedback(body: FeedbackPayload): Promise<void> {
+  const response = await apiFetch("/api/feedback", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const e = await parseError(response);
+    throw new ApiError(e.message, response.status, e.code);
+  }
+}
+
+export async function savePreferences(body: PreferencesPayload): Promise<void> {
+  const response = await apiFetch("/api/feedback/preferences", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const e = await parseError(response);
+    throw new ApiError(e.message, response.status, e.code);
+  }
 }
 

@@ -12,6 +12,7 @@ import "./shared/styles/toolbox.css";
 import "./shared/styles/account.css";
 import "./shared/styles/help.css";
 import "./shared/styles/legal.css";
+import "./shared/styles/feedback.css";
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element not found");

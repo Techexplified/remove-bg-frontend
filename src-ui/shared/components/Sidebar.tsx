@@ -1,4 +1,4 @@
-import { Sparkles, Layers, User, HelpCircle, Shield } from "lucide-react";
+import { Sparkles, Layers, User, HelpCircle, Shield, Settings } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { setSection } from "../../app/slices/uiSlice";
 import type { SectionId } from "../types/features";
@@ -9,6 +9,7 @@ const NAV = [
   { id: "account" as SectionId, icon: User, label: "Account" },
 ];
 const BOTTOM = [
+  { id: "settings" as SectionId, icon: Settings, label: "Settings" },
   { id: "help" as SectionId, icon: HelpCircle, label: "Help" },
   { id: "legal" as SectionId, icon: Shield, label: "Legal" },
 ];

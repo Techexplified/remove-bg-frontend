@@ -43,7 +43,7 @@ export interface ProcessingState {
   extraBullets?: string[];
 }
 
-export type SectionId = "features" | "toolbox" | "account" | "help" | "legal";
+export type SectionId = "features" | "toolbox" | "account" | "help" | "legal" | "settings";
 
 export type ModalKind = "none" | "topup" | "plan_picker" | "prompt" | "options" | "coming_soon" | "feature_preview";
 

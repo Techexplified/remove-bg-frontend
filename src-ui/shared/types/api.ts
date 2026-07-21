@@ -18,6 +18,11 @@ export interface PlanStatus {
   sessionToken: string;
   /** When true: Pro plan, Pro top-ups, and all AI features are server-side locked. */
   featuresLocked: boolean;
+  // ── AI Trial + Feedback fields (Section 3 of handoff) ──
+  aiTrialUsed: boolean;
+  featureInterests: string[];
+  feedbackPromptsEnabled: boolean;
+  reviewPromptShown: boolean;
 }
 
 export interface ManagePlanUrls {
@@ -48,4 +53,21 @@ export interface RunFeatureOptions {
   shadowIntensity?: string;   // "0.0".."1.0"
   shadowSpread?: string;      // "small" | "medium" | "large"
   lightingMode?: string;      // "auto"|"preserve-colors"|"portrait"
+}
+
+// ── Feedback API types ──
+
+export type FeedbackRating = "thumbs_up" | "thumbs_down" | "retry";
+export type FeedbackIssue = "background_not_clean" | "wrong_colours" | "lost_detail" | "other";
+export type ReviewPromptResponse = "agreed" | "dismissed" | "already_done";
+
+export type FeedbackPayload =
+  | { type: "rating"; feature: FeatureId; rating: FeedbackRating; issue?: FeedbackIssue; issue_text?: string }
+  | { type: "paywall_exit_interest"; feature: FeatureId | "other"; other_text?: string }
+  | { type: "review_prompt"; response: ReviewPromptResponse }
+  | { type: "open"; message?: string; star_rating?: number };
+
+export interface PreferencesPayload {
+  feature_interests?: string[];
+  feedback_prompts_enabled?: boolean;
 }

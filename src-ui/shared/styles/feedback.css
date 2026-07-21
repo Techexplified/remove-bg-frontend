@@ -1,0 +1,103 @@
+/* ============================================================================
+   Feedback System Styles — AI Trial, Quick Rating, Exit Intent, Review, Settings
+   ============================================================================ */
+
+/* ── Quick Rating ── */
+.quick-rating{margin-top:14px;padding:12px 0 0;border-top:1px solid rgba(255,255,255,.08);text-align:center}
+.quick-rating-label{font-size:10.5px;color:rgba(255,255,255,.6);margin-bottom:8px;font-weight:500}
+.quick-rating-btns{display:flex;gap:6px;justify-content:center;width:100%}
+.quick-rating-btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:7px 6px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:rgba(255,255,255,.8);font-size:10px;font-weight:600;white-space:nowrap;cursor:pointer;transition:all .15s}
+.quick-rating-btn:hover{background:rgba(108,71,255,.15);border-color:rgba(108,71,255,.3);color:#ffffff}
+.quick-rating-btn.selected{background:rgba(108,71,255,.25);border-color:var(--brand);color:#ffffff}
+.quick-rating-btn:active{transform:scale(.96)}
+
+/* Issue chips (after thumbs_down) */
+.rating-issues{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:8px;animation:fadeSlideUp .2s ease}
+.rating-issue-chip{padding:5px 10px;border-radius:100px;border:1px solid var(--border-2);background:var(--surface-3);color:var(--text-2);font-size:9.5px;font-weight:600;cursor:pointer;transition:all .12s}
+.rating-issue-chip:hover{border-color:var(--brand-border);background:rgba(108,71,255,.08);color:var(--brand-light)}
+.rating-issue-chip.selected{background:rgba(108,71,255,.15);border-color:var(--brand);color:var(--brand-light)}
+.rating-other-input{margin-top:6px;width:100%;max-width:220px;padding:6px 10px;border-radius:8px;border:1px solid var(--border-2);background:var(--surface-3);color:var(--text);font-size:10.5px;outline:none;transition:border-color .15s}
+.rating-other-input:focus{border-color:var(--brand)}
+.rating-sent{font-size:10.5px;color:var(--brand-light);font-weight:600;animation:fadeSlideUp .25s ease}
+
+/* ── AI Trial Invite ── */
+.ai-trial-invite{margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(108,71,255,.06);border:1px solid rgba(108,71,255,.12);display:flex;align-items:center;justify-content:space-between;gap:8px;animation:fadeSlideUp .3s ease}
+.ai-trial-invite-text{font-size:11px;color:var(--brand-light);font-weight:600;display:flex;align-items:center;gap:6px;cursor:pointer;transition:color .12s}
+.ai-trial-invite-text:hover{color:var(--white)}
+.ai-trial-dismiss{background:none;border:none;color:var(--text-3);font-size:14px;cursor:pointer;padding:2px 4px;line-height:1;transition:color .12s}
+.ai-trial-dismiss:hover{color:var(--text)}
+
+/* AI Trial Loading */
+.ai-trial-loading{margin-top:10px;padding:14px;border-radius:10px;background:rgba(108,71,255,.06);border:1px solid rgba(108,71,255,.12);text-align:center;animation:fadeSlideUp .2s ease}
+.ai-trial-loading-text{font-size:11px;color:var(--brand-light);font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px}
+
+/* AI Trial Result */
+.ai-trial-result{margin-top:10px;border-radius:10px;overflow:hidden;border:1px solid rgba(108,71,255,.15);animation:fadeSlideUp .3s ease}
+.ai-trial-result img{width:100%;height:120px;object-fit:cover;display:block}
+.ai-trial-upgrade{padding:10px 12px;background:rgba(108,71,255,.06);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ai-trial-upgrade-text{font-size:10.5px;color:var(--text-2)}
+.ai-trial-upgrade-btn{padding:5px 12px;border-radius:8px;border:1px solid var(--brand);background:var(--brand);color:white;font-size:10px;font-weight:700;cursor:pointer;transition:all .12s;white-space:nowrap}
+.ai-trial-upgrade-btn:hover{background:var(--brand-dark)}
+
+/* ── Exit Intent Question ── */
+.exit-intent{position:fixed;bottom:16px;left:60px;right:8px;z-index:900;padding:14px 16px;border-radius:12px;background:var(--surface-3);border:1px solid var(--border-2);box-shadow:var(--shadow-lg);animation:fadeSlideUp .25s ease}
+.exit-intent-title{font-size:11.5px;color:var(--text);font-weight:600;margin-bottom:10px}
+.exit-intent-chips{display:flex;flex-wrap:wrap;gap:6px}
+.exit-intent-chip{padding:6px 12px;border-radius:100px;border:1px solid var(--border-2);background:var(--surface-4);color:var(--text-2);font-size:10.5px;font-weight:600;cursor:pointer;transition:all .15s}
+.exit-intent-chip:hover{border-color:var(--brand-border);color:var(--brand-light);background:rgba(108,71,255,.1)}
+.exit-intent-chip.selected{background:rgba(108,71,255,.15);border-color:var(--brand);color:var(--brand-light)}
+.exit-intent-other{margin-top:8px;width:100%;padding:7px 10px;border-radius:8px;border:1px solid var(--border-2);background:var(--surface-3);color:var(--text);font-size:10.5px;outline:none}
+.exit-intent-other:focus{border-color:var(--brand)}
+
+/* ── Review Prompt ── */
+.review-prompt{position:fixed;bottom:16px;left:60px;right:8px;z-index:850;padding:16px;border-radius:12px;background:var(--surface-3);border:1px solid var(--border-2);box-shadow:var(--shadow-lg);animation:fadeSlideUp .3s ease;text-align:center}
+.review-prompt-emoji{font-size:24px;margin-bottom:6px}
+.review-prompt-title{font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:4px}
+.review-prompt-desc{font-size:10.5px;color:var(--text-3);line-height:1.5;margin-bottom:12px}
+.review-prompt-actions{display:flex;gap:6px;justify-content:center}
+.review-prompt-btn{padding:7px 14px;border-radius:8px;font-size:10.5px;font-weight:600;cursor:pointer;transition:all .12s;border:1px solid var(--border-2)}
+.review-prompt-btn.primary{background:var(--brand);border-color:var(--brand);color:white}
+.review-prompt-btn.primary:hover{background:var(--brand-dark)}
+.review-prompt-btn.secondary{background:var(--surface-4);color:var(--text-2)}
+.review-prompt-btn.secondary:hover{background:rgba(255,255,255,.08)}
+
+/* ── Settings Screen — Feedback & Preferences ── */
+.settings-section{margin-bottom:16px}
+.settings-section-title{font-size:10px;font-weight:700;color:var(--c-text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.settings-card{background:var(--c-card);border:1px solid var(--c-border);border-radius:var(--radius-lg);padding:16px;margin-bottom:14px;box-shadow:var(--c-shadow)}
+.settings-card-title{font-size:12px;font-weight:700;color:var(--c-text);margin-bottom:4px}
+.settings-card-desc{font-size:10.5px;color:var(--c-text-3);margin-bottom:12px;line-height:1.4}
+
+/* Feature interest checkboxes */
+.settings-checkbox-group{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.settings-checkbox{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11.5px;color:var(--c-text-2);transition:color .12s;user-select:none}
+.settings-checkbox:hover{color:var(--c-text)}
+.settings-checkbox input[type="checkbox"]{width:16px;height:16px;accent-color:var(--brand);cursor:pointer;flex-shrink:0}
+.settings-checkbox.checked{color:var(--c-text);font-weight:600}
+
+/* Star rating */
+.star-rating{display:inline-flex;gap:3px;margin-bottom:10px}
+.star-rating-star{font-size:22px;cursor:pointer;color:var(--c-border-2);transition:all .1s;user-select:none}
+.star-rating-star:hover{transform:scale(1.15)}
+.star-rating-star.filled{color:#fbbf24}
+.star-rating-star.hovered{color:#fcd34d}
+
+/* Feedback textarea */
+.settings-textarea{width:100%;min-height:60px;max-height:120px;padding:8px 10px;border-radius:8px;border:1px solid var(--c-border);background:var(--c-bg-2);color:var(--c-text);font-size:11px;line-height:1.5;resize:vertical;outline:none;transition:border-color .15s}
+.settings-textarea:focus{border-color:var(--brand)}
+
+/* Settings action buttons */
+.settings-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;transition:all .12s;border:none}
+.settings-btn:active{transform:scale(.97)}
+.settings-btn-primary{background:var(--brand);color:white}
+.settings-btn-primary:hover{background:var(--brand-dark)}
+.settings-btn-primary:disabled{opacity:.4;cursor:not-allowed}
+
+/* Opt-out toggle */
+.settings-toggle{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:10px;background:var(--c-bg-2);border:1px solid var(--c-border);cursor:pointer;transition:all .12s}
+.settings-toggle:hover{border-color:var(--brand-border)}
+.settings-toggle-text{font-size:11px;color:var(--c-text-2);line-height:1.4}
+.settings-toggle-sub{font-size:9.5px;color:var(--c-text-3);margin-top:2px}
+
+/* ── Animations ── */
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}

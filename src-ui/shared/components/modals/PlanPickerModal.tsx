@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Check, X, ExternalLink, AlertTriangle, Calendar, ChevronRight, ArrowRight, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
-import { closeModal } from "../../../app/slices/uiSlice";
+import { closeModal, setShowExitIntent } from "../../../app/slices/uiSlice";
 import { initCheckout } from "../../../app/slices/statusSlice";
 
 interface Props {
@@ -43,6 +43,11 @@ export function PlanPickerModal({ onCheckoutOpen, onScheduled }: Props) {
   const isDowngradeScheduled = status?.scheduledPlanChange === "starter";
   const renewLabel = fmtDate(status?.subscriptionEndsAt);
   const proLocked = status?.featuresLocked === true;
+
+  function handleDismiss() {
+    dispatch(closeModal());
+    dispatch(setShowExitIntent(true));
+  }
 
   async function handleChoose(planId: "starter" | "pro") {
     setIsLoading(true);
@@ -258,85 +263,89 @@ export function PlanPickerModal({ onCheckoutOpen, onScheduled }: Props) {
   return (
     <AnimatePresence>
       <motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={() => dispatch(closeModal())}>
-        <motion.div className="modal" initial={{ scale: .93, y: 8 }} animate={{ scale: 1, y: 0 }}
-          onClick={e => e.stopPropagation()} style={{ maxWidth: 350 }}>
-          <div className="modal-head" style={{ borderBottom: "none" }}>
+        onClick={handleDismiss}>
+        <motion.div className="modal" initial={{ scale: .94, y: 4 }} animate={{ scale: 1, y: 0 }}
+          onClick={e => e.stopPropagation()} style={{ maxWidth: 335 }}>
+          <div className="modal-head" style={{ borderBottom: "1px solid rgba(255,255,255,.08)", padding: "12px 14px" }}>
             <div>
-              <div className="modal-title" style={{ fontSize: "16px" }}>Choose a Plan</div>
-              <div className="modal-sub">Unlock features and monthly credits</div>
+              <div className="modal-title" style={{ fontSize: "15px", fontWeight: 700, color: "#ffffff" }}>Choose a Plan</div>
+              <div className="modal-sub" style={{ fontSize: "10.5px", color: "rgba(255,255,255,.55)" }}>Unlock features and monthly credits</div>
             </div>
-            <button className="modal-close" onClick={() => dispatch(closeModal())} style={{ color: "var(--c-text-3)" }}><X size={16} /></button>
+            <button className="modal-close" onClick={handleDismiss} style={{ color: "rgba(255,255,255,.4)" }}><X size={15} /></button>
           </div>
-          <div className="modal-body" style={{ gap: "10px", paddingTop: 0 }}>
+          <div className="modal-body" style={{ gap: "8px", padding: "10px 14px" }}>
 
-            {/* Pro card (featured) — greyed out when proLocked */}
+            {/* Pro card (featured/locked) */}
             <div style={{
-              background: "var(--c-bg-2)",
+              background: "rgba(255, 255, 255, 0.025)",
               borderRadius: "14px",
-              border: proLocked ? "1px solid var(--c-border)" : "1.5px solid var(--brand-border)",
-              padding: "16px",
-              opacity: proLocked ? 0.55 : 1,
+              border: "1px solid rgba(255, 255, 255, 0.07)",
+              padding: "10px 12px",
+              opacity: proLocked ? 0.6 : 1,
               transition: "opacity 0.2s",
             }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
-                <span style={{ fontSize: "9px", fontWeight: "700", padding: "3px 8px", background: proLocked ? "var(--c-text-3)" : "var(--brand)", borderRadius: "100px", color: "white", textTransform: "uppercase" }}>★ Pro Plan</span>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                <span style={{ fontSize: "8.5px", fontWeight: "700", padding: "2px 7px", background: "rgba(255, 255, 255, 0.07)", borderRadius: "100px", color: "rgba(255, 255, 255, 0.55)", textTransform: "uppercase", letterSpacing: "0.03em" }}>★ Pro Plan</span>
                 {proLocked
-                  ? <span style={{ fontSize: "9px", fontWeight: "700", padding: "3px 8px", background: "rgba(108,71,255,.08)", borderRadius: "100px", color: "var(--c-text-3)" }}>🔒 Coming Soon</span>
-                  : <span style={{ fontSize: "9px", fontWeight: "700", padding: "3px 8px", background: "#fbbf24", borderRadius: "100px", color: "#000" }}>Most Popular</span>
+                  ? <span style={{ fontSize: "8.5px", fontWeight: "700", padding: "2px 7px", background: "rgba(255, 255, 255, 0.05)", borderRadius: "100px", color: "rgba(255, 255, 255, 0.4)", border: "1px solid rgba(255, 255, 255, 0.07)", display: "inline-flex", alignItems: "center", gap: 3 }}>🔒 Coming Soon</span>
+                  : <span style={{ fontSize: "8.5px", fontWeight: "700", padding: "2px 7px", background: "#fbbf24", borderRadius: "100px", color: "#000" }}>Most Popular</span>
                 }
               </div>
-              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "4px" }}>
-                <span style={{ fontSize: "32px", fontWeight: "800", color: proLocked ? "var(--c-text-3)" : "var(--c-text)", lineHeight: 1 }}>$39</span>
-                <span style={{ fontSize: "11px", color: "var(--c-text-3)", marginLeft: "4px" }}>/month</span>
+              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "2px" }}>
+                <span style={{ fontSize: "24px", fontWeight: "800", color: proLocked ? "rgba(255, 255, 255, 0.5)" : "#ffffff", lineHeight: 1 }}>$39</span>
+                <span style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.4)", marginLeft: "4px" }}>/month</span>
               </div>
-              <div style={{ fontSize: "10.5px", color: "var(--c-text-3)", marginBottom: "10px" }}>300 credits/month · All 10 features</div>
-              <ul style={{ listStyle: "none", padding: 0, margin: "0 0 12px" }}>
+              <div style={{ fontSize: "9.5px", color: "rgba(255, 255, 255, 0.4)", marginBottom: "6px" }}>300 credits/month · All 10 features</div>
+              <ul style={{ listStyle: "none", padding: 0, margin: "0 0 8px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 8px" }}>
                 {PRO_FEATURES.map(f => (
-                  <li key={f} style={{ display: "flex", alignItems: "center", gap: "7px", fontSize: "11px", color: "var(--c-text-2)", marginBottom: "5px" }}>
-                    <Check size={10} color={proLocked ? "var(--c-text-3)" : "var(--brand)"} strokeWidth={3} />{f}
+                  <li key={f} style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "9.5px", color: "rgba(255, 255, 255, 0.45)" }}>
+                    <Check size={9} color="rgba(255, 255, 255, 0.25)" strokeWidth={2.5} style={{ flexShrink: 0 }} />
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f}</span>
                   </li>
                 ))}
               </ul>
               <button
                 className="cta-btn"
                 style={{
-                  marginBottom: 0, height: "40px", display: "flex", gap: "6px",
-                  background: proLocked ? "var(--c-border)" : "var(--brand)",
-                  color: proLocked ? "var(--c-text-3)" : "white",
+                  marginBottom: 0, height: "32px", display: "flex", gap: "5px", fontSize: "11px",
+                  background: "rgba(255, 255, 255, 0.05)",
+                  border: "1px solid rgba(255, 255, 255, 0.07)",
+                  color: "rgba(255, 255, 255, 0.4)",
+                  boxShadow: "none",
+                  borderRadius: "9px",
                   cursor: proLocked ? "not-allowed" : "pointer",
                 }}
                 disabled={isLoading || proLocked}
                 title={proLocked ? "Pro plan coming soon" : undefined}
                 onClick={() => !proLocked && handleChoose("pro")}
               >
-                <ArrowRight size={14} />
+                <ArrowRight size={13} />
                 {proLocked ? "Coming Soon" : loadingPlan === "pro" ? "Processing…" : "Get Pro — $39/mo"}
               </button>
             </div>
 
-            {/* Starter card — always fully functional, never affected by proLocked */}
+            {/* Starter card — featured active card */}
             <div style={{
-              background: "var(--c-bg-2)",
+              background: "linear-gradient(180deg, rgba(108,71,255,0.14) 0%, rgba(108,71,255,0.04) 100%)",
               borderRadius: "14px",
-              border: "1.5px solid var(--brand-border)",
-              padding: "16px",
-              boxShadow: "0 4px 16px rgba(108,71,255,.08)",
+              border: "1.5px solid rgba(108,71,255,0.45)",
+              padding: "12px 14px",
+              boxShadow: "0 6px 24px rgba(108,71,255,0.18)",
             }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
-                <span style={{ fontSize: "9px", fontWeight: "700", padding: "3px 8px", background: "var(--brand)", borderRadius: "100px", color: "white", textTransform: "uppercase" }}>★ Starter Plan</span>
-                <span style={{ fontSize: "9px", fontWeight: "700", padding: "3px 8px", background: "#34d399", borderRadius: "100px", color: "#064e3b", textTransform: "uppercase" }}>Available Now</span>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                <span style={{ fontSize: "8.5px", fontWeight: "700", padding: "2px 7px", background: "var(--brand)", borderRadius: "100px", color: "white", textTransform: "uppercase", letterSpacing: "0.03em" }}>★ Starter Plan</span>
+                <span style={{ fontSize: "8.5px", fontWeight: "700", padding: "2px 7px", background: "rgba(16,185,129,0.15)", borderRadius: "100px", color: "#34d399", border: "1px solid rgba(16,185,129,0.3)", textTransform: "uppercase", letterSpacing: "0.03em" }}>Available Now</span>
               </div>
-              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "4px" }}>
-                <span style={{ fontSize: "32px", fontWeight: "800", color: "var(--c-text)", lineHeight: 1 }}>$12</span>
-                <span style={{ fontSize: "11px", color: "var(--c-text-3)", marginLeft: "4px" }}>/month</span>
+              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "2px" }}>
+                <span style={{ fontSize: "28px", fontWeight: "800", color: "#ffffff", lineHeight: 1 }}>$12</span>
+                <span style={{ fontSize: "10.5px", color: "rgba(255, 255, 255, 0.55)", marginLeft: "4px" }}>/month</span>
               </div>
-              <div style={{ fontSize: "10.5px", color: "var(--c-text-3)", marginBottom: "10px" }}>40 credits/month · Basic features</div>
-              <ul style={{ listStyle: "none", padding: 0, margin: "0 0 12px" }}>
+              <div style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.55)", marginBottom: "8px" }}>40 credits/month · Basic features</div>
+              <ul style={{ listStyle: "none", padding: 0, margin: "0 0 10px" }}>
                 {STARTER_FEATURES.map(f => (
-                  <li key={f} style={{ display: "flex", alignItems: "center", gap: "7px", fontSize: "11px", color: "var(--c-text-2)", marginBottom: "5px" }}>
-                    <span style={{ width: "16px", height: "16px", borderRadius: "50%", background: "rgba(108,71,255,.08)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--brand)", flexShrink: 0 }}>
-                      <Check size={10} strokeWidth={3} />
+                  <li key={f} style={{ display: "flex", alignItems: "center", gap: "7px", fontSize: "10.5px", color: "rgba(255, 255, 255, 0.9)", marginBottom: "4px" }}>
+                    <span style={{ width: "14px", height: "14px", borderRadius: "50%", background: "rgba(108,71,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#a78bfa", flexShrink: 0 }}>
+                      <Check size={9} strokeWidth={3} />
                     </span>
                     {f}
                   </li>
@@ -346,22 +355,27 @@ export function PlanPickerModal({ onCheckoutOpen, onScheduled }: Props) {
                 className="cta-btn"
                 style={{
                   marginBottom: 0,
-                  height: "40px",
+                  height: "36px",
+                  borderRadius: "10px",
+                  fontSize: "11.5px",
                   display: "flex",
                   gap: "6px",
-                  background: "var(--brand)",
+                  background: "linear-gradient(135deg, #7c5cff, #5535e8)",
                   color: "white",
                   cursor: "pointer",
+                  fontWeight: 700,
+                  boxShadow: "0 4px 16px rgba(108,71,255,0.4)",
+                  border: "none",
                 }}
                 disabled={isLoading}
                 onClick={() => handleChoose("starter")}
               >
-                <ArrowRight size={14} />
+                <ArrowRight size={13} />
                 {loadingPlan === "starter" ? "Processing…" : "Get Starter — $12/mo"}
               </button>
             </div>
 
-            <button onClick={() => dispatch(closeModal())} style={{ width: "100%", background: "transparent", border: "none", color: "var(--c-text-3)", padding: "8px", fontSize: "11px", cursor: "pointer" }}>
+            <button onClick={handleDismiss} style={{ width: "100%", background: "transparent", border: "none", color: "rgba(255, 255, 255, 0.45)", padding: "4px 0 2px", fontSize: "11px", cursor: "pointer", fontWeight: 500, transition: "color 0.12s" }} onMouseEnter={e => e.currentTarget.style.color = "#fff"} onMouseLeave={e => e.currentTarget.style.color = "rgba(255, 255, 255, 0.45)"}>
               Maybe Later
             </button>
           </div>
