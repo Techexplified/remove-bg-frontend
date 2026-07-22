@@ -16,9 +16,6 @@ import { ComingSoonModal } from "./shared/components/modals/ComingSoonModal";
 import { FeaturePreviewModal } from "./shared/components/modals/FeaturePreviewModal";
 import { FeaturesScreen } from "./features/features-screen/FeaturesScreen";
 import { ToolboxScreen } from "./features/toolbox/ToolboxScreen";
-import { AccountScreen } from "./features/account/AccountScreen";
-import { HelpScreen } from "./features/help/HelpScreen";
-import { LegalScreen } from "./features/legal/LegalScreen";
 import { SettingsScreen } from "./features/settings/SettingsScreen";
 import { ExitIntentQuestion } from "./shared/components/feedback/ExitIntentQuestion";
 import { ReviewPrompt } from "./shared/components/feedback/ReviewPrompt";
@@ -267,7 +264,7 @@ function AppReady() {
       const selCount = selection.hasSelection ? selection.count : 0;
       if (feature.needsInputImage && (!selection.hasSelection || selCount > 1)) {
         toast("error", selCount > 1 ? "Multiple layers selected" : "No layer selected",
-          selCount > 1 ? "Select a single layer, or use Batch mode in Toolbox." : "Select an image on the canvas first.");
+          selCount > 1 ? "Select a single layer, or use Batch mode in Design System." : "Select an image on the canvas first.");
         return;
       }
       if (feature.maxInputPixels && selection.hasSelection && selection.count === 1
@@ -374,18 +371,7 @@ function AppReady() {
               notify={bridge.notify}
             />
           )}
-          {activeSection === "account" && (
-            <AccountScreen
-              onManagePlan={() => dispatch(openModal({ kind: "plan_picker" }))}
-              onTopUp={() => dispatch(openModal({ kind: "topup" }))}
-              openExternal={bridge.openExternal}
-              watching={checkoutWatcher.isWatching}
-              onStopWatching={checkoutWatcher.stop}
-            />
-          )}
           {activeSection === "settings" && <SettingsScreen />}
-          {activeSection === "help" && <HelpScreen openExternal={bridge.openExternal} />}
-          {activeSection === "legal" && <LegalScreen openExternal={bridge.openExternal} />}
         </motion.div>
       </AnimatePresence>
 

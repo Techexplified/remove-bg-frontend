@@ -1,9 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { User, HelpCircle, Shield } from "lucide-react";
 import { Check, Star, Send, Save, RefreshCw } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { savePreferences, submitFeedback, ApiError } from "../../shared/api/client";
 import { loadPlanStatus } from "../../app/slices/statusSlice";
-import { addToast } from "../../app/slices/uiSlice";
+import { addToast, openModal } from "../../app/slices/uiSlice";
+import { AccountScreen } from "../account/AccountScreen";
+import { HelpScreen } from "../help/HelpScreen";
+import { LegalScreen } from "../legal/LegalScreen";
+import { useCheckoutWatcher } from "../../shared/hooks/useCheckoutWatcher";
+import { usePluginBridge } from "../../shared/hooks/usePluginBridge";
 
 const FEATURE_CHECKBOXES = [
   { id: "remove_bg_basic", label: "Remove Background" },
@@ -15,13 +21,26 @@ const FEATURE_CHECKBOXES = [
   { id: "ai_upscale", label: "AI Upscale" },
 ];
 
+type SettingsTab = "main" | "account" | "help" | "legal";
+
+const TABS: { id: SettingsTab; label: string; icon: typeof User }[] = [
+  { id: "account", label: "Account", icon: User },
+  { id: "help", label: "Help & Support", icon: HelpCircle },
+  { id: "legal", label: "Legal", icon: Shield },
+];
+
 export function SettingsScreen() {
   const dispatch = useAppDispatch();
   const status = useAppSelector(s => s.status.data);
+  const bridge = usePluginBridge();
+  const checkoutWatcher = useCheckoutWatcher();
+
+  const [activeTab, setActiveTab] = useState<SettingsTab>("main");
 
   // Preference state
-  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
-
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>(
+    () => status?.featureInterests || []
+  );
   const [savingPrefs, setSavingPrefs] = useState(false);
 
   // Feedback state
@@ -29,13 +48,6 @@ export function SettingsScreen() {
   const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState("");
   const [sendingFeedback, setSendingFeedback] = useState(false);
-
-  useEffect(() => {
-    if (status) {
-      setSelectedFeatures(status.featureInterests || []);
-
-    }
-  }, [status]);
 
   function toggleFeature(id: string) {
     setSelectedFeatures(prev =>
@@ -46,9 +58,7 @@ export function SettingsScreen() {
   async function handleSavePreferences() {
     setSavingPrefs(true);
     try {
-      await savePreferences({
-        feature_interests: selectedFeatures,
-      });
+      await savePreferences({ feature_interests: selectedFeatures });
       dispatch(loadPlanStatus());
       dispatch(addToast({
         id: `toast_save_prefs_${Date.now()}`,
@@ -78,7 +88,6 @@ export function SettingsScreen() {
       }));
       return;
     }
-
     setSendingFeedback(true);
     try {
       await submitFeedback({
@@ -106,11 +115,91 @@ export function SettingsScreen() {
     }
   }
 
+  // Render sub-tabs with back button
+  if (activeTab !== "main") {
+    const tabInfo = TABS.find(t => t.id === activeTab)!;
+    return (
+      <>
+        <div style={{ padding: "8px 14px 0", borderBottom: "1px solid var(--c-border)", background: "var(--c-bg)" }}>
+          <button
+            onClick={() => setActiveTab("main")}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: "5px",
+              background: "none", border: "none", cursor: "pointer",
+              color: "var(--c-text-3)", fontSize: "11px", fontWeight: "600",
+              padding: "4px 8px 10px 0",
+            }}
+            onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = "var(--brand)"}
+            onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = "var(--c-text-3)"}
+          >
+            ← Settings
+          </button>
+          
+          <div style={{ display: "flex", gap: "4px" }}>
+            {TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  display: "flex", alignItems: "center", gap: "5px",
+                  padding: "7px 12px", borderRadius: "8px 8px 0 0",
+                  border: "none", cursor: "pointer", fontSize: "11px", fontWeight: "700",
+                  background: activeTab === tab.id ? "var(--c-bg-2)" : "transparent",
+                  color: activeTab === tab.id ? "var(--brand)" : "var(--c-text-3)",
+                  borderBottom: activeTab === tab.id ? "2px solid var(--brand)" : "2px solid transparent",
+                }}
+              >
+                <tab.icon size={13} /> {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {activeTab === "account" && (
+          <AccountScreen
+            onManagePlan={() => dispatch(openModal({ kind: "plan_picker" }))}
+            onTopUp={() => dispatch(openModal({ kind: "topup" }))}
+            openExternal={bridge.openExternal}
+            watching={checkoutWatcher.isWatching}
+            onStopWatching={checkoutWatcher.stop}
+          />
+        )}
+        {activeTab === "help" && <HelpScreen openExternal={bridge.openExternal} />}
+        {activeTab === "legal" && <LegalScreen openExternal={bridge.openExternal} />}
+      </>
+    );
+  }
+
+  // Main settings content
   return (
     <>
       <div className="pane-header">
         <h2>Settings</h2>
         <p>Feedback & Preferences</p>
+      </div>
+
+      {/* Tab bar — below header */}
+      <div style={{ display: "flex", gap: "6px", padding: "12px 14px 16px", borderBottom: "1px solid var(--c-border)" }}>
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              display: "flex", alignItems: "center", gap: "5px",
+              padding: "7px 13px", borderRadius: "8px",
+              border: "none", cursor: "pointer", fontSize: "11px", fontWeight: "700",
+              background: "var(--brand)",
+              color: "#ffffff",
+              opacity: 1,
+              transition: "opacity 0.15s",
+              flex: 1, justifyContent: "center",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = "0.85"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
+          >
+            <tab.icon size={13} /> {tab.label}
+          </button>
+        ))}
       </div>
 
       <div className="pane-body">
@@ -187,8 +276,6 @@ export function SettingsScreen() {
             {sendingFeedback ? <RefreshCw size={13} className="spin" /> : <Send size={13} />} Send feedback
           </button>
         </div>
-
-
       </div>
     </>
   );
