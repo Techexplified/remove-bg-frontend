@@ -1,11 +1,11 @@
-import { Sparkles, Layers, Settings } from "lucide-react";
+import { Home, PenTool, Settings } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { setSection } from "../../app/slices/uiSlice";
 import type { SectionId } from "../types/features";
 
 const NAV = [
-  { id: "features" as SectionId, icon: Sparkles, label: "Features" },
-  { id: "toolbox" as SectionId, icon: Layers, label: "Design System" },
+  { id: "features" as SectionId, icon: Home, label: "Features" },
+  { id: "toolbox" as SectionId, icon: PenTool, label: "Design System" },
 ];
 const BOTTOM = [
   { id: "settings" as SectionId, icon: Settings, label: "Settings" },
