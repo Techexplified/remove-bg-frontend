@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { User, HelpCircle, Shield } from "lucide-react";
-import { Check, Star, Send, Save, RefreshCw } from "lucide-react";
+import { User, HelpCircle, Shield, Star, Send, Save, RefreshCw } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { savePreferences, submitFeedback, ApiError } from "../../shared/api/client";
 import { loadPlanStatus } from "../../app/slices/statusSlice";
@@ -21,12 +20,13 @@ const FEATURE_CHECKBOXES = [
   { id: "ai_upscale", label: "AI Upscale" },
 ];
 
-type SettingsTab = "main" | "account" | "help" | "legal";
+type SettingsTab = "account" | "help" | "legal" | "feedback";
 
 const TABS: { id: SettingsTab; label: string; icon: typeof User }[] = [
   { id: "account", label: "Account", icon: User },
   { id: "help", label: "Help & Support", icon: HelpCircle },
   { id: "legal", label: "Legal", icon: Shield },
+  { id: "feedback", label: "Feedback", icon: Star },
 ];
 
 export function SettingsScreen() {
@@ -35,7 +35,7 @@ export function SettingsScreen() {
   const bridge = usePluginBridge();
   const checkoutWatcher = useCheckoutWatcher();
 
-  const [activeTab, setActiveTab] = useState<SettingsTab>("main");
+  const [activeTab, setActiveTab] = useState<SettingsTab>("account");
 
   // Preference state
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>(
@@ -115,168 +115,124 @@ export function SettingsScreen() {
     }
   }
 
-  // Render sub-tabs with back button
-  if (activeTab !== "main") {
-    const tabInfo = TABS.find(t => t.id === activeTab)!;
-    return (
-      <>
-        <div style={{ padding: "8px 14px 0", borderBottom: "1px solid var(--c-border)", background: "var(--c-bg)" }}>
-          <button
-            onClick={() => setActiveTab("main")}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: "5px",
-              background: "none", border: "none", cursor: "pointer",
-              color: "var(--c-text-3)", fontSize: "11px", fontWeight: "600",
-              padding: "4px 8px 10px 0",
-            }}
-            onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = "var(--brand)"}
-            onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = "var(--c-text-3)"}
-          >
-            ← Settings
-          </button>
-          
-          <div style={{ display: "flex", gap: "4px" }}>
-            {TABS.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  display: "flex", alignItems: "center", gap: "5px",
-                  padding: "7px 12px", borderRadius: "8px 8px 0 0",
-                  border: "none", cursor: "pointer", fontSize: "11px", fontWeight: "700",
-                  background: activeTab === tab.id ? "var(--c-bg-2)" : "transparent",
-                  color: activeTab === tab.id ? "var(--brand)" : "var(--c-text-3)",
-                  borderBottom: activeTab === tab.id ? "2px solid var(--brand)" : "2px solid transparent",
-                }}
-              >
-                <tab.icon size={13} /> {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {activeTab === "account" && (
-          <AccountScreen
-            onManagePlan={() => dispatch(openModal({ kind: "plan_picker" }))}
-            onTopUp={() => dispatch(openModal({ kind: "topup" }))}
-            openExternal={bridge.openExternal}
-            watching={checkoutWatcher.isWatching}
-            onStopWatching={checkoutWatcher.stop}
-          />
-        )}
-        {activeTab === "help" && <HelpScreen openExternal={bridge.openExternal} />}
-        {activeTab === "legal" && <LegalScreen openExternal={bridge.openExternal} />}
-      </>
-    );
-  }
-
-  // Main settings content
   return (
     <>
-      <div className="pane-header">
-        <h2>Settings</h2>
-        <p>Feedback & Preferences</p>
-      </div>
-
-      {/* Tab bar — below header */}
-      <div style={{ display: "flex", gap: "6px", padding: "12px 14px 16px", borderBottom: "1px solid var(--c-border)" }}>
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            style={{
-              display: "flex", alignItems: "center", gap: "5px",
-              padding: "7px 13px", borderRadius: "8px",
-              border: "none", cursor: "pointer", fontSize: "11px", fontWeight: "700",
-              background: "var(--brand)",
-              color: "#ffffff",
-              opacity: 1,
-              transition: "opacity 0.15s",
-              flex: 1, justifyContent: "center",
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = "0.85"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
-          >
-            <tab.icon size={13} /> {tab.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="pane-body">
-        {/* Feature Interests Card */}
-        <div className="settings-card">
-          <div className="settings-card-title">Which features are you interested in?</div>
-          <div className="settings-card-desc">
-            Update anytime — helps us prioritise what to build next.
-          </div>
-
-          <div className="settings-checkbox-group">
-            {FEATURE_CHECKBOXES.map(item => {
-              const isChecked = selectedFeatures.includes(item.id);
-              return (
-                <label
-                  key={item.id}
-                  className={`settings-checkbox ${isChecked ? "checked" : ""}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => toggleFeature(item.id)}
-                  />
-                  <span>{item.label}</span>
-                </label>
-              );
-            })}
-          </div>
-
-          <button
-            className="settings-btn settings-btn-primary"
-            onClick={() => handleSavePreferences()}
-            disabled={savingPrefs}
-          >
-            {savingPrefs ? <RefreshCw size={13} className="spin" /> : <Save size={13} />} Save preferences
-          </button>
-        </div>
-
-        {/* Rate & Open Feedback Card */}
-        <div className="settings-card">
-          <div className="settings-card-title">Rate your experience</div>
-          <div className="star-rating" onMouseLeave={() => setHoverRating(null)}>
-            {[1, 2, 3, 4, 5].map(star => {
-              const active = star <= ((hoverRating ?? starRating) || 0);
-              return (
-                <span
-                  key={star}
-                  className={`star-rating-star ${active ? (hoverRating ? "hovered" : "filled") : ""}`}
-                  onMouseEnter={() => setHoverRating(star)}
-                  onClick={() => setStarRating(star)}
-                >
-                  ★
-                </span>
-              );
-            })}
-          </div>
-
-          <div className="settings-card-title" style={{ marginTop: 12 }}>
-            Anything you'd like us to build or improve?
-          </div>
-          <textarea
-            className="settings-textarea"
-            placeholder="Share your ideas or feature requests…"
-            value={feedbackMsg}
-            onChange={e => setFeedbackMsg(e.target.value)}
-          />
-
-          <button
-            className="settings-btn settings-btn-primary"
-            style={{ marginTop: 12 }}
-            onClick={handleSendFeedback}
-            disabled={sendingFeedback}
-          >
-            {sendingFeedback ? <RefreshCw size={13} className="spin" /> : <Send size={13} />} Send feedback
-          </button>
+      <div style={{ padding: "8px 14px 0", borderBottom: "1px solid var(--c-border)", background: "var(--c-bg)" }}>
+        <div style={{ display: "flex", gap: "4px" }}>
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                display: "flex", alignItems: "center", gap: "5px",
+                padding: "7px 12px", borderRadius: "8px 8px 0 0",
+                border: "none", cursor: "pointer", fontSize: "11px", fontWeight: "700",
+                background: activeTab === tab.id ? "var(--c-bg-2)" : "transparent",
+                color: activeTab === tab.id ? "var(--brand)" : "var(--c-text-3)",
+                borderBottom: activeTab === tab.id ? "2px solid var(--brand)" : "2px solid transparent",
+              }}
+            >
+              <tab.icon size={13} /> {tab.label}
+            </button>
+          ))}
         </div>
       </div>
+
+      {activeTab === "account" && (
+        <AccountScreen
+          onManagePlan={() => dispatch(openModal({ kind: "plan_picker" }))}
+          onTopUp={() => dispatch(openModal({ kind: "topup" }))}
+          openExternal={bridge.openExternal}
+          watching={checkoutWatcher.isWatching}
+          onStopWatching={checkoutWatcher.stop}
+        />
+      )}
+      {activeTab === "help" && <HelpScreen openExternal={bridge.openExternal} />}
+      {activeTab === "legal" && <LegalScreen openExternal={bridge.openExternal} />}
+
+      {activeTab === "feedback" && (
+        <>
+          <div className="pane-header">
+            <h2>Feedback & Preferences</h2>
+            <p>Tell us what to build next</p>
+          </div>
+          <div className="pane-body">
+            {/* Feature Interests Card */}
+            <div className="settings-card">
+              <div className="settings-card-title">Which features are you interested in?</div>
+              <div className="settings-card-desc">
+                Update anytime — helps us prioritise what to build next.
+              </div>
+
+              <div className="settings-checkbox-group">
+                {FEATURE_CHECKBOXES.map(item => {
+                  const isChecked = selectedFeatures.includes(item.id);
+                  return (
+                    <label
+                      key={item.id}
+                      className={`settings-checkbox ${isChecked ? "checked" : ""}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleFeature(item.id)}
+                      />
+                      <span>{item.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              <button
+                className="settings-btn settings-btn-primary"
+                onClick={() => handleSavePreferences()}
+                disabled={savingPrefs}
+              >
+                {savingPrefs ? <RefreshCw size={13} className="spin" /> : <Save size={13} />} Save preferences
+              </button>
+            </div>
+
+            {/* Rate & Open Feedback Card */}
+            <div className="settings-card">
+              <div className="settings-card-title">Rate your experience</div>
+              <div className="star-rating" onMouseLeave={() => setHoverRating(null)}>
+                {[1, 2, 3, 4, 5].map(star => {
+                  const active = star <= ((hoverRating ?? starRating) || 0);
+                  return (
+                    <span
+                      key={star}
+                      className={`star-rating-star ${active ? (hoverRating ? "hovered" : "filled") : ""}`}
+                      onMouseEnter={() => setHoverRating(star)}
+                      onClick={() => setStarRating(star)}
+                    >
+                      ★
+                    </span>
+                  );
+                })}
+              </div>
+
+              <div className="settings-card-title" style={{ marginTop: 12 }}>
+                Anything you'd like us to build or improve?
+              </div>
+              <textarea
+                className="settings-textarea"
+                placeholder="Share your ideas or feature requests…"
+                value={feedbackMsg}
+                onChange={e => setFeedbackMsg(e.target.value)}
+              />
+
+              <button
+                className="settings-btn settings-btn-primary"
+                style={{ marginTop: 12 }}
+                onClick={handleSendFeedback}
+                disabled={sendingFeedback}
+              >
+                {sendingFeedback ? <RefreshCw size={13} className="spin" /> : <Send size={13} />} Send feedback
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }

@@ -250,7 +250,7 @@ export function AccountScreen({ onManagePlan, onTopUp, openExternal, watching, o
         <a href="#" onClick={(e) => { e.preventDefault(); openExternal("https://explified.com/terms-of-service"); }}>Terms</a> ·{" "}
         <a href="#" onClick={(e) => { e.preventDefault(); openExternal("mailto:support@explified.com"); }}>Support</a>
         <br />
-        Built by Explified · v1.4.2
+        Built by Explified 
       </div>
     </>
   );

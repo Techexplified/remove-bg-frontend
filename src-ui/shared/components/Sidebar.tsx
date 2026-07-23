@@ -6,6 +6,8 @@ import type { SectionId } from "../types/features";
 const NAV = [
   { id: "features" as SectionId, icon: Sparkles, label: "Features" },
   { id: "toolbox" as SectionId, icon: Layers, label: "Design System" },
+];
+const BOTTOM = [
   { id: "settings" as SectionId, icon: Settings, label: "Settings" },
 ];
 
@@ -22,6 +24,14 @@ export function Sidebar() {
           </button>
         ))}
       </nav>
+      <div className="sidebar-bottom">
+        {BOTTOM.map(({ id, icon: Icon, label }) => (
+          <button key={id} className={`sidebar-btn ${active === id ? "active" : ""}`}
+            onClick={() => dispatch(setSection(id))} title={label}>
+            <Icon size={18} />
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
