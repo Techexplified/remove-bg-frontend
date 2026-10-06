@@ -4,7 +4,7 @@ import { useAppDispatch, useAppSelector } from "../../../app/hooks";
 import { runAiTrial, ApiError } from "../../api/client";
 import { loadPlanStatus } from "../../../app/slices/statusSlice";
 import { openModal, addToast } from "../../../app/slices/uiSlice";
-import { usePluginBridge } from "../../hooks/usePluginBridge";
+import { usePluginBridgeContext } from "../../context/PluginBridgeContext";
 
 interface Props {
   originalImageBytes: Uint8Array | null;
@@ -13,11 +13,11 @@ interface Props {
 export function AiTrialInvite({ originalImageBytes }: Props) {
   const dispatch = useAppDispatch();
   const status = useAppSelector(s => s.status.data);
-  const bridge = usePluginBridge();
+  const bridge = usePluginBridgeContext();
 
   const [hasAlreadyBeenOffered, setHasAlreadyBeenOffered] = useState<boolean>(() => {
     try {
-      return localStorage.getItem("zerobg_ai_trial_offered") === "true";
+      return localStorage.getItem("removebg_ai_trial_offered") === "true" || localStorage.getItem("zerobg_ai_trial_offered") === "true";
     } catch {
       return false;
     }
@@ -28,10 +28,18 @@ export function AiTrialInvite({ originalImageBytes }: Props) {
   const [aiResultUrl, setAiResultUrl] = useState<string | null>(null);
   const [errorDismiss, setErrorDismiss] = useState(false);
 
+  // BUG-08 fix: revoke the AI trial blob URL when it changes or the component unmounts,
+  // preventing a memory leak that accumulated on every trial use.
+  useEffect(() => {
+    return () => {
+      if (aiResultUrl) URL.revokeObjectURL(aiResultUrl);
+    };
+  }, [aiResultUrl]);
+
   useEffect(() => {
     if (status && !status.aiTrialUsed && !hasAlreadyBeenOffered) {
       try {
-        localStorage.setItem("zerobg_ai_trial_offered", "true");
+        localStorage.setItem("removebg_ai_trial_offered", "true");
       } catch {
         /* ignore */
       }

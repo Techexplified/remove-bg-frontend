@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
 import { closeModal } from "../../../app/slices/uiSlice";
 import { initTopUp } from "../../../app/slices/statusSlice";
-import { TOPUP_PACKS } from "../../types/featureData";
+import { TOPUP_PACKS, PLAN_LIMITS } from "../../types/featureData";
 import type { PackId } from "../../types/api";
 
 interface Props {
@@ -19,6 +19,10 @@ export function TopUpModal({ onCheckoutOpen }: Props) {
   const isFree = plan === "free";
   const canBuy = planStatus?.canBuyTopup ?? false;
   const proLocked = planStatus?.featuresLocked === true;
+  const spendable = !planStatus ? 0 : (planStatus.credits + (plan === "pro" ? planStatus.topupCreditsPro : planStatus.topupCreditsStarter));
+  const planLimit = PLAN_LIMITS[plan] ?? 10;
+  const totalLimit = Math.max(planLimit, spendable);
+  const pct = totalLimit > 0 ? Math.min(100, Math.round((spendable / totalLimit) * 100)) : 0;
 
   async function handlePack(packId: PackId) {
     setIsLoading(true);
@@ -33,187 +37,120 @@ export function TopUpModal({ onCheckoutOpen }: Props) {
     }
   }
 
+  const [selectedPackId, setSelectedPackId] = useState<PackId>("small");
+
+  const isPro = plan === "pro";
+  const packs = TOPUP_PACKS.map(tp => ({
+    id: tp.id as PackId,
+    credits: isPro ? tp.proCredits : tp.starterCredits,
+    price: isPro ? tp.proPrice : tp.starterPrice,
+    unitPrice: isPro
+      ? `${(parseFloat(tp.proPrice.replace("$", "")) / tp.proCredits).toFixed(2)} / credit`
+      : `${(parseFloat(tp.starterPrice.replace("$", "")) / tp.starterCredits).toFixed(2)} / credit`,
+    badge: tp.badge,
+  }));
+
+  const selectedPack = packs.find(p => p.id === selectedPackId) || packs[0];
+
   return (
     <AnimatePresence>
       <motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={() => dispatch(closeModal())}>
         <motion.div className="modal" initial={{ scale: .93, y: 8 }} animate={{ scale: 1, y: 0 }}
-          onClick={e => e.stopPropagation()} style={{ maxWidth: 340 }}>
-          <div className="modal-head">
-            <div>
-              <div className="modal-title">Top Up Credits</div>
-              <div className="modal-sub">One-time purchase, instant delivery</div>
+          onClick={e => e.stopPropagation()} style={{ maxWidth: 360, width: "calc(100% - 24px)", background: "var(--surface-1)", border: "1px solid var(--c-border-2)", borderRadius: "18px", padding: "18px" }}>
+          
+          {/* Header */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <button onClick={() => dispatch(closeModal())} style={{ background: "none", border: "none", color: "var(--c-text)", cursor: "pointer", fontSize: "14px", fontWeight: "700" }}>
+                ←
+              </button>
+              <div style={{ fontSize: "15px", fontWeight: "800", color: "var(--c-text)" }}>Top Up Credits</div>
             </div>
-            <button className="modal-close" onClick={() => dispatch(closeModal())} style={{ color: "var(--c-text-3)" }}><X size={16} /></button>
+            <button className="modal-close" onClick={() => dispatch(closeModal())} style={{ color: "var(--c-text-3)", background: "none", border: "none", cursor: "pointer" }}><X size={16} /></button>
           </div>
-          <div className="modal-body" style={{ gap: "12px" }}>
-            {isFree && <div className="banner banner-warning">You need a Starter or Pro plan to buy top-up credits.</div>}
-            {!isFree && !canBuy && <div className="banner banner-warning">Top-ups aren't available on your account right now.</div>}
-            {/* When proLocked and user is on Pro, hide Pro packs and show informational message */}
-            {!isFree && canBuy && plan === "pro" && proLocked && (
-              <div style={{
-                background: "var(--c-bg-2)",
-                border: "1px solid var(--c-border)",
-                borderRadius: "14px",
-                padding: "20px 16px",
-                textAlign: "center",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 10,
-              }}>
-                <div style={{ fontSize: 28 }}>🚀</div>
-                <div style={{ fontSize: "13px", fontWeight: "700", color: "var(--c-text)" }}>Pro Top-Up Credits — Coming Soon</div>
-                <div style={{ fontSize: "11px", color: "var(--c-text-3)", lineHeight: 1.5 }}>
-                  Additional Pro credit packs are being finalised and will be available shortly. Your existing credits remain active.
-                </div>
+
+          <div className="modal-body" style={{ gap: "14px", padding: 0 }}>
+            {/* Remaining Credits Bar */}
+            <div className="credit-card" style={{ padding: "12px 14px", marginBottom: 0 }}>
+              <div className="credit-card-header" style={{ marginBottom: "6px" }}>
+                <span>Remaining Credits <span className={`badge badge-${plan}`} style={{ marginLeft: "4px" }}>{plan.toUpperCase()}</span></span>
+                <span style={{ fontWeight: "800", color: "var(--c-text)" }}>{spendable} <span style={{ color: "var(--c-text-3)", fontWeight: "400" }}>/ {totalLimit}</span></span>
               </div>
-            )}
-            {!isFree && canBuy && !(plan === "pro" && proLocked) && TOPUP_PACKS.map((pack, i) => {
-              const credits = plan === "pro" ? pack.proCredits : pack.starterCredits;
-              const price = plan === "pro" ? pack.proPrice : pack.starterPrice;
-              const isMainPack = i === 1;
-
-              return (
-                <div key={pack.id} style={{
-                  position: "relative",
-                  background: isMainPack
-                    ? "linear-gradient(145deg, #0f0a1e 0%, #1a1035 50%, #0f0a1e 100%)"
-                    : "linear-gradient(145deg, #fafafa 0%, #ffffff 100%)",
-                  border: isMainPack ? "1px solid rgba(108,71,255,.35)" : "1px solid #e8e8ee",
-                  borderRadius: "16px",
-                  padding: "18px",
-                  marginBottom: "10px",
-                  boxShadow: isMainPack
-                    ? "0 8px 32px rgba(108,71,255,.15), 0 2px 8px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.05)"
-                    : "0 2px 8px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.06)",
-                  overflow: "hidden",
-                }}>
-                  {/* Subtle gradient glow for main pack */}
-                  {isMainPack && (
-                    <div style={{
-                      position: "absolute", top: 0, left: 0, right: 0, height: "1px",
-                      background: "linear-gradient(90deg, transparent, rgba(108,71,255,.6), rgba(139,92,246,.4), transparent)",
-                    }} />
-                  )}
-
-                  {/* Top row: label + badge | price */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span style={{
-                        fontSize: "13.5px",
-                        fontWeight: "700",
-                        color: isMainPack ? "#ffffff" : "#1a1a2e",
-                        letterSpacing: "-0.01em",
-                      }}>
-                        {pack.label}
-                      </span>
-                      <span style={{
-                        fontSize: "8.5px",
-                        fontWeight: "700",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.04em",
-                        padding: "3px 8px",
-                        borderRadius: "100px",
-                        background: isMainPack
-                          ? "linear-gradient(135deg, rgba(108,71,255,.25), rgba(139,92,246,.2))"
-                          : "rgba(108,71,255,.07)",
-                        color: isMainPack ? "#c4b5fd" : "var(--brand)",
-                        border: isMainPack
-                          ? "1px solid rgba(139,92,246,.3)"
-                          : "1px solid rgba(108,71,255,.15)",
-                      }}>
-                        {pack.badge}
-                      </span>
-                    </div>
-                    <span style={{
-                      fontSize: "9.5px",
-                      color: isMainPack ? "rgba(255,255,255,.4)" : "#9ca3af",
-                      fontWeight: "500",
-                    }}>
-                      one-time
-                    </span>
-                  </div>
-
-                  {/* Credits + Price hero row */}
-                  <div style={{
-                    display: "flex",
-                    alignItems: "baseline",
-                    justifyContent: "space-between",
-                    marginBottom: "14px",
-                    padding: "10px 14px",
-                    borderRadius: "12px",
-                    background: isMainPack
-                      ? "rgba(108,71,255,.08)"
-                      : "rgba(108,71,255,.03)",
-                    border: isMainPack
-                      ? "1px solid rgba(108,71,255,.12)"
-                      : "1px solid rgba(108,71,255,.06)",
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <Sparkles size={14} style={{ color: isMainPack ? "#a78bfa" : "var(--brand)" }} />
-                      <span style={{
-                        fontSize: "22px",
-                        fontWeight: "800",
-                        color: isMainPack ? "#ffffff" : "#1a1a2e",
-                        letterSpacing: "-0.02em",
-                        lineHeight: 1,
-                      }}>
-                        +{credits}
-                      </span>
-                      <span style={{
-                        fontSize: "11px",
-                        fontWeight: "600",
-                        color: isMainPack ? "rgba(255,255,255,.5)" : "#8b8ba0",
-                        marginTop: "2px",
-                      }}>
-                        credits
-                      </span>
-                    </div>
-                    <span style={{
-                      fontSize: "20px",
-                      fontWeight: "800",
-                      color: isMainPack ? "#ffffff" : "#1a1a2e",
-                      letterSpacing: "-0.02em",
-                    }}>
-                      {price}
-                    </span>
-                  </div>
-
-                  {/* CTA button */}
-                  <button disabled={isLoading} onClick={() => handlePack(pack.id)} style={{
-                    width: "100%",
-                    height: "42px",
-                    borderRadius: "11px",
-                    border: "none",
-                    fontWeight: "700",
-                    fontSize: "12.5px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "7px",
-                    cursor: isLoading ? "wait" : "pointer",
-                    transition: "all .15s ease",
-                    background: isMainPack
-                      ? "linear-gradient(135deg, #7c3aed, #6c47ff, #8b5cf6)"
-                      : "linear-gradient(135deg, #1a1a2e, #2d2b55)",
-                    color: "#ffffff",
-                    boxShadow: isMainPack
-                      ? "0 4px 14px rgba(108,71,255,.35), inset 0 1px 0 rgba(255,255,255,.15)"
-                      : "0 2px 8px rgba(0,0,0,.1), inset 0 1px 0 rgba(255,255,255,.05)",
-                    opacity: isLoading ? 0.7 : 1,
-                    letterSpacing: "-0.01em",
-                  }}>
-                    <Sparkles size={13} /> Add {credits} Credits — {price}
-                  </button>
-                </div>
-              );
-            })}
-
-            <div className="pack-secure" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", fontSize: "10.5px", color: "var(--c-text-4)", marginTop: "4px", textAlign: "center", lineHeight: "1.5" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}><Shield size={11} /> Secure payment · subscription required</div>
-              <div>Credits are tied to your current plan and cannot be transferred or refunded after use.</div>
+              <div className="progress-bar-track" style={{ height: "4px" }}>
+                <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
+              </div>
             </div>
+
+            {/* Select Credit Pack List */}
+            <div>
+              <div className="card-label" style={{ marginBottom: "8px" }}>Select Credit Pack</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {packs.map(p => {
+                  const isSelected = selectedPackId === p.id;
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => setSelectedPackId(p.id)}
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        padding: "12px 14px", borderRadius: "12px",
+                        background: isSelected ? "rgba(108, 71, 255, 0.06)" : "var(--c-card)",
+                        border: isSelected ? "1.5px solid var(--brand)" : "1px solid var(--c-border)",
+                        boxShadow: isSelected ? "0 0 16px rgba(108, 71, 255, 0.12)" : "none",
+                        cursor: "pointer", transition: "all 0.15s"
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div style={{
+                          width: "16px", height: "16px", borderRadius: "50%",
+                          border: isSelected ? "5px solid var(--brand)" : "1.5px solid var(--c-text-3)",
+                          background: "#ffffff", transition: "all 0.12s"
+                        }} />
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span style={{ fontSize: "13px", fontWeight: "800", color: "var(--c-text)" }}>{p.credits} Credits</span>
+                            {p.badge && (
+                              <span style={{ fontSize: "8.5px", fontWeight: "800", padding: "2px 6px", borderRadius: "100px", background: "rgba(108, 71, 255, 0.12)", color: "var(--brand)", border: "1px solid rgba(108, 71, 255, 0.25)" }}>
+                                {p.badge}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: "10px", color: "var(--c-text-3)", marginTop: "2px" }}>{p.unitPrice}</div>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: "14px", fontWeight: "800", color: "var(--c-text)" }}>{p.price}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Payment Method */}
+            <div>
+              <div className="card-label" style={{ marginBottom: "8px" }}>Payment Method</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "var(--c-card)", border: "1px solid var(--c-border)", borderRadius: "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", fontWeight: "600", color: "var(--c-text)" }}>
+                  <span>💳</span> •••• 4242
+                </div>
+                <button style={{ background: "none", border: "none", color: "var(--brand)", fontSize: "11px", fontWeight: "700", cursor: "pointer" }}>
+                  Change
+                </button>
+              </div>
+              <div style={{ fontSize: "9.5px", color: "var(--c-text-3)", textAlign: "center", marginTop: "10px" }}>
+                Credits never expire and roll over each billing cycle.
+              </div>
+            </div>
+
+            {/* Action CTA */}
+            <button
+              className="cta-btn"
+              style={{ height: "44px", marginTop: "4px", marginBottom: 0 }}
+              disabled={isLoading}
+              onClick={() => handlePack(selectedPack.id)}
+            >
+              {isLoading ? "Processing…" : `Buy ${selectedPack.credits} Credits — ${selectedPack.price}`}
+            </button>
           </div>
         </motion.div>
       </motion.div>

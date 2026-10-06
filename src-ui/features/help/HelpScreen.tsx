@@ -57,7 +57,7 @@ export function HelpScreen({ openExternal }: Props) {
 
   // We want the 4 questions from the screenshot for the preview list
   const previewQuestions = [
-    "Why does my bank statement show \"Dodo Payments\" instead of Explified or ZeroBG?",
+    "Why does my bank statement show \"Dodo Payments\" instead of Explified or RemoveBG?",
     "Will I be charged automatically every month?",
     "How do I cancel my subscription?",
     "What happens to my credits when I upgrade or downgrade?"
@@ -85,7 +85,7 @@ export function HelpScreen({ openExternal }: Props) {
       <>
         <div className="breadcrumb-container">
           <button className="breadcrumb-link" onClick={() => setView("main")}>
-            <ChevronLeft size={13} /> Help & Support
+            <ChevronLeft size={13} /> Help
           </button>
         </div>
         <div className="pane-header">
@@ -137,7 +137,7 @@ export function HelpScreen({ openExternal }: Props) {
   return (
     <>
       <div className="pane-header">
-        <h2>Help & Support</h2>
+        <h2>Help</h2>
         <p>We're here to help</p>
       </div>
       <div className="pane-body">

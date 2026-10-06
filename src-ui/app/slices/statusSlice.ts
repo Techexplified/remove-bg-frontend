@@ -44,13 +44,43 @@ export const initTopUp = createAsyncThunk<{ checkoutUrl: string }, PackId, { rej
   }
 );
 
+const CACHE_KEY = "removebg_cached_status";
+
+function loadCachedPlanStatus(): PlanStatus | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.credits === "number" && parsed.plan) {
+      return parsed as PlanStatus;
+    }
+  } catch {
+    // Ignore parse or storage errors
+  }
+  return null;
+}
+
+function saveCachedPlanStatus(status: PlanStatus | null) {
+  try {
+    if (status) {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(status));
+    }
+  } catch {
+    // Ignore storage quota errors
+  }
+}
+
 interface StatusState {
   data: PlanStatus | null;
   loading: boolean;
   error: string | null;
 }
 
-const initialState: StatusState = { data: null, loading: false, error: null };
+const initialState: StatusState = {
+  data: loadCachedPlanStatus(),
+  loading: false,
+  error: null,
+};
 
 const statusSlice = createSlice({
   name: "status",
@@ -58,6 +88,7 @@ const statusSlice = createSlice({
   reducers: {
     setPlanStatus: (s, a: PayloadAction<PlanStatus>) => {
       s.data = a.payload;
+      saveCachedPlanStatus(a.payload);
     },
     deductCredits: (s, a: PayloadAction<number>) => {
       if (s.data) {
@@ -73,6 +104,7 @@ const statusSlice = createSlice({
             s.data.topupCreditsStarter = Math.max(0, s.data.topupCreditsStarter - remaining);
           }
         }
+        saveCachedPlanStatus(s.data);
       }
     },
   },
@@ -85,10 +117,14 @@ const statusSlice = createSlice({
       .addCase(loadPlanStatus.fulfilled, (s, a) => {
         s.loading = false;
         s.data = a.payload;
+        saveCachedPlanStatus(a.payload);
       })
       .addCase(loadPlanStatus.rejected, (s, a) => {
         s.loading = false;
-        s.data = null;
+        // SWR: Keep cached data if available; do not wipe out UI during temporary network issues
+        if (!s.data) {
+          s.data = null;
+        }
         s.error = a.payload ?? "network error";
       })
       .addCase(initCheckout.fulfilled, (_s, a) => {

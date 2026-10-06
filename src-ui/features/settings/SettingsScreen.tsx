@@ -3,12 +3,12 @@ import { User, HelpCircle, Shield, Star, Send, Save, RefreshCw } from "lucide-re
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { savePreferences, submitFeedback, ApiError } from "../../shared/api/client";
 import { loadPlanStatus } from "../../app/slices/statusSlice";
-import { addToast, openModal } from "../../app/slices/uiSlice";
+import { addToast, openModal, setSection } from "../../app/slices/uiSlice";
 import { AccountScreen } from "../account/AccountScreen";
 import { HelpScreen } from "../help/HelpScreen";
 import { LegalScreen } from "../legal/LegalScreen";
 import { useCheckoutWatcher } from "../../shared/hooks/useCheckoutWatcher";
-import { usePluginBridge } from "../../shared/hooks/usePluginBridge";
+import { usePluginBridgeContext } from "../../shared/context/PluginBridgeContext";
 
 const FEATURE_CHECKBOXES = [
   { id: "remove_bg_basic", label: "Remove Background" },
@@ -24,7 +24,7 @@ type SettingsTab = "account" | "help" | "legal" | "feedback";
 
 const TABS: { id: SettingsTab; label: string; icon: typeof User }[] = [
   { id: "account", label: "Account", icon: User },
-  { id: "help", label: "Help & Support", icon: HelpCircle },
+  { id: "help", label: "Help", icon: HelpCircle },
   { id: "legal", label: "Legal", icon: Shield },
   { id: "feedback", label: "Feedback", icon: Star },
 ];
@@ -32,7 +32,7 @@ const TABS: { id: SettingsTab; label: string; icon: typeof User }[] = [
 export function SettingsScreen() {
   const dispatch = useAppDispatch();
   const status = useAppSelector(s => s.status.data);
-  const bridge = usePluginBridge();
+  const bridge = usePluginBridgeContext();
   const checkoutWatcher = useCheckoutWatcher();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>("account");
@@ -117,6 +117,17 @@ export function SettingsScreen() {
 
   return (
     <>
+      <div className="pane-header" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <button
+          onClick={() => dispatch(setSection("features"))}
+          style={{ background: "none", border: "none", color: "var(--c-text)", cursor: "pointer", fontSize: "16px", fontWeight: "700", display: "flex", alignItems: "center" }}
+          title="Back to Home">
+          ←
+        </button>
+        <div>
+          <h2 style={{ fontSize: "16px", fontWeight: "800", color: "var(--c-text)", margin: 0 }}>Settings</h2>
+        </div>
+      </div>
       <div style={{ padding: "8px 14px 0", borderBottom: "1px solid var(--c-border)", background: "var(--c-bg)" }}>
         <div style={{ display: "flex", gap: "4px" }}>
           {TABS.map(tab => (

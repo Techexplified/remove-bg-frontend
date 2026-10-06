@@ -1,6 +1,6 @@
-# ZeroBG - Background Remover and AI Image Editor
+# RemoveBG - Background Remover and AI Image Editor
 
-ZeroBG is a powerful Figma plugin that allows you to instantly remove image backgrounds, crop, resize, and apply stunning AI-powered enhancements directly inside your Figma canvas.
+RemoveBG is a powerful Figma plugin that allows you to instantly remove image backgrounds, crop, resize, and apply stunning AI-powered enhancements directly inside your Figma canvas.
 
 ## Features
 

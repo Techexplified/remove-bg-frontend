@@ -1,5 +1,5 @@
 {
-  "name": "ZeroBG - Background Remover and AI Image Editor",
+  "name": "RemoveBG - Background Remover and AI Image Editor",
   "api": "1.0.0",
   "main": "dist/code.js",
   "ui": "dist/ui.html",
@@ -13,6 +13,6 @@
       "https://*.ngrok-free.dev",
       "https://explified.com"
     ],
-    "reasoning": "Connects to ZeroBG backend for plan status, image processing, and checkout."
+    "reasoning": "Connects to RemoveBG backend for plan status, image processing, and checkout."
   }
 }

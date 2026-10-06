@@ -9,7 +9,7 @@ interface Props {
 }
 
 // Default plugin ID placeholder as noted in plan
-const FIGMA_COMMUNITY_REVIEW_URL = "https://www.figma.com/community/plugin/1643987146382893434/zerobg-background-remover-and-ai-image-editor";
+const FIGMA_COMMUNITY_REVIEW_URL = "https://www.figma.com/community/plugin/1643987146382893434/removebg-background-remover-and-ai-image-editor";
 
 export function ReviewPrompt({ openExternal }: Props) {
   const dispatch = useAppDispatch();

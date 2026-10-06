@@ -1,6 +1,4 @@
-import { Shield, FileText, RefreshCw, Lock, ExternalLink, HelpCircle, ChevronLeft } from "lucide-react";
-import { useAppDispatch } from "../../app/hooks";
-import { setSection } from "../../app/slices/uiSlice";
+import { Shield, FileText, RefreshCw, Lock, ExternalLink, HelpCircle } from "lucide-react";
 
 interface Props { openExternal: (url: string) => void; }
 
@@ -13,15 +11,8 @@ const LINKS = [
 ];
 
 export function LegalScreen({ openExternal }: Props) {
-  const dispatch = useAppDispatch();
-
   return (
     <>
-      <div className="breadcrumb-container" style={{ paddingBottom: 0 }}>
-        <button className="breadcrumb-link" onClick={() => dispatch(setSection("features"))}>
-          <ChevronLeft size={13} /> Home
-        </button>
-      </div>
       <div className="pane-header">
         <h2>Legal</h2>
         <p>Terms, policies, and data disclosures</p>

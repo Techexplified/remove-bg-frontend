@@ -5,6 +5,7 @@ import { loadPlanStatus } from "../../app/slices/statusSlice";
 import { fetchManagePlanUrls, cancelSubscription, reactivateSubscription, ApiError } from "../../shared/api/client";
 import type { ManagePlanUrls } from "../../shared/types/api";
 import { addToast } from "../../app/slices/uiSlice";
+import { PLAN_LIMITS } from "../../shared/types/featureData";
 
 interface Props { onManagePlan: () => void; onTopUp: () => void; openExternal: (url: string) => void; watching: boolean; onStopWatching: () => void; }
 
@@ -94,6 +95,13 @@ export function AccountScreen({ onManagePlan, onTopUp, openExternal, watching, o
     return () => { cancelled = true; };
   }, [portalOpen, status?.plan]);
 
+  const plan = status?.plan ?? "free";
+  const isFree = plan === "free";
+  const monthlyCredits = status?.credits ?? 0;
+  const limit = PLAN_LIMITS[plan] ?? 10;
+  const spendableTopup = plan === "pro" ? (status?.topupCreditsPro ?? 0) : plan === "starter" ? (status?.topupCreditsStarter ?? 0) : 0;
+  const remainingPct = limit > 0 ? Math.min(100, Math.max(0, Math.round((monthlyCredits / limit) * 100))) : 0;
+
   const isCancelling = !!status?.scheduledCancelAt;
   const isDowngradeScheduled = status?.scheduledPlanChange === "starter";
   const cancelLabel = fmtDate(status?.scheduledCancelAt);
@@ -105,144 +113,122 @@ export function AccountScreen({ onManagePlan, onTopUp, openExternal, watching, o
 
   return (
     <>
-      <div className="pane-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div><h2>Account</h2><p>Your plan and identity</p></div>
-        <button onClick={() => refetch()} style={{ background: "none", border: "none", color: "var(--c-text-3)", cursor: "pointer", marginTop: 18 }}><RefreshCw size={14} /></button>
+      <div className="pane-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <h2 style={{ fontSize: "16px", fontWeight: "800", color: "var(--c-text)" }}>Account</h2>
+          <p style={{ fontSize: "11px", color: "var(--c-text-3)" }}>Your plan and identity</p>
+        </div>
+        <button onClick={() => refetch()} style={{ background: "none", border: "none", color: "var(--c-text-3)", cursor: "pointer" }}>
+          <RefreshCw size={14} />
+        </button>
       </div>
+
       <div className="pane-body">
-        {/* Banners */}
-        {isCancelling && status?.isActive && (
-          <div className="banner banner-warning" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-              <Calendar size={14} style={{ flexShrink: 0, marginTop: 1 }} />
-              <div>
-                <strong>Your subscription cancels on {cancelLabel}.</strong>
-                <div style={{ fontSize: 10.5, marginTop: 2 }}>You keep full access until then.</div>
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <button
-                onClick={handleReactivate}
-                disabled={submittingAction !== null}
-                style={{
-                  background: "rgba(245,158,11,.1)",
-                  border: "1px solid rgba(245,158,11,.18)",
-                  color: "#92400e",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                  padding: "4px 8px",
-                  borderRadius: "6px",
-                  fontSize: "10px",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "2px",
-                  whiteSpace: "nowrap"
-                }}
-              >
-                {submittingAction === "reactivate" ? "Reactivating..." : "Reactivate →"}
-              </button>
-              {watching && <button onClick={onStopWatching} style={{ background: "none", border: "none", color: "rgba(251,191,36,.5)", cursor: "pointer", fontSize: 14 }}>×</button>}
-            </div>
+        {/* User Identity Card */}
+        <div className="account-identity">
+          <div className="account-avatar">{initials}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="account-name">{displayName ?? "Explified"}</div>
+            <div className="account-figma-id">{userId ?? "Auto-Linked Figma"}</div>
           </div>
-        )}
-        {isDowngradeScheduled && !isCancelling && (
-          <div className="banner banner-info">
-            <Calendar size={14} style={{ flexShrink: 0, marginTop: 1 }} />
-            <div style={{ flex: 1 }}>
-              <strong>Switching to Starter {renewLabel ? `on ${renewLabel}` : "at next renewal"}</strong>
-              <div style={{ fontSize: 10.5, marginTop: 2 }}>Pro access continues until then.</div>
-              {(status?.topupCreditsPro ?? 0) > 0 && <div style={{ fontSize: 10, marginTop: 4, color: "rgba(108,71,255,.7)" }}>Your {status!.topupCreditsPro} Pro top-up credits will move to your Starter pool at renewal.</div>}
-            </div>
-          </div>
-        )}
+          <span className="account-auto-linked">AUTO-LINKED FIGMA</span>
+        </div>
 
-        {/* Hero state (compact) */}
-        {isLoading && !status ? (
-          <div className="card"><div className="skeleton" style={{ width: "100%", height: 80 }} /></div>
-        ) : status && (
-          <div className="hero" style={{ marginBottom: 14 }}>
-            <div className="hero-top">
-              <div className="hero-top-left">
-                <span className={`plan-pill plan-pill-${status.plan}`}>{status.plan.toUpperCase()} PLAN</span>
-                {status.isActive && !isCancelling && (
-                  <span className="badge badge-active" style={{ background: "rgba(74,222,128,.15)", color: "#4ade80", border: "1px solid rgba(74,222,128,.2)", textTransform: "uppercase", padding: "2px 6px" }}>
-                    ● ACTIVE
-                  </span>
-                )}
-              </div>
-              {status.plan !== "free" && <div className="hero-billing-info">{isCancelling ? `Cancels ${cancelLabel}` : `Renews ${renewLabel}`}</div>}
-            </div>
-            <div className="hero-credits"><span className="hero-credits-num">{status.credits}</span><span className="hero-credits-label">credits this month</span></div>
-            {status.plan !== "free" && (
-              <div className="hero-actions">
-                <button className="btn-hero-ghost" onClick={onTopUp} disabled={!status.canBuyTopup || isCancelling}>+ Top Up</button>
-                <button className="btn-hero-primary" onClick={onManagePlan}>Manage Plan</button>
-              </div>
-            )}
-            {status.plan === "free" && <button className="btn-hero-primary" style={{ width: "100%", marginTop: 14 }} onClick={onManagePlan}>Upgrade Plan</button>}
-          </div>
-        )}
-
-        {/* Figma Account */}
+        {/* Current Plan Card */}
         <div className="card">
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <div className="card-label" style={{ marginBottom: 0 }}>Figma Account</div>
-            <span style={{ fontSize: 9.5, color: "var(--text-2)", background: "var(--surface-2)", border: "1px solid var(--border)", padding: "2px 7px", borderRadius: 100 }}>Auto-linked</span>
-          </div>
-          <div className="account-identity">
-            <div className="account-avatar">{initials}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="account-name">{displayName ?? "Figma User"}</div>
-              <div className="account-figma-id">🔗 {userId ?? "loading…"}</div>
+          <div className="card-label">Current Plan</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+            <div>
+              <div style={{ fontSize: "20px", fontWeight: "800", color: "var(--c-text)", letterSpacing: "-0.01em" }}>
+                {plan.toUpperCase()}
+              </div>
+              <div style={{ fontSize: "11px", color: "var(--c-text-3)", marginTop: "4px" }}>
+                You have <strong style={{ color: "var(--brand)" }}>{monthlyCredits}</strong> of {limit} credits remaining from your monthly quota{spendableTopup > 0 ? ` (+${spendableTopup} top-up)` : ""}.
+              </div>
+            </div>
+
+            {/* Circular progress gauge */}
+            <div className="gauge-container">
+              <svg width="64" height="64" viewBox="0 0 64 64">
+                <circle cx="32" cy="32" r="26" fill="none" stroke="var(--c-border)" strokeWidth="6" />
+                <circle
+                  cx="32" cy="32" r="26" fill="none" stroke="var(--brand)" strokeWidth="6"
+                  strokeDasharray="163.36" strokeDashoffset={163.36 * (1 - remainingPct / 100)}
+                  strokeLinecap="round" transform="rotate(-90 32 32)"
+                  style={{ transition: "stroke-dashoffset 0.5s ease" }}
+                />
+              </svg>
+              <div className="gauge-pct">{remainingPct}%</div>
             </div>
           </div>
-          <div style={{ fontSize: 10.5, color: "var(--c-text-2)", lineHeight: 1.5, marginTop: 10, background: "rgba(108,71,255,.03)", border: "1px solid var(--brand-border)", borderRadius: 8, padding: "8px 10px" }}>
-            <span style={{ fontWeight: 800, color: "var(--brand)", marginRight: 4 }}>i</span> Your identity is tied to your active Figma account. There's nothing to sign in or out of — your account automatically connects when you open this plugin.
+
+          <div style={{ display: "flex", gap: "8px", marginTop: "14px" }}>
+            {isFree ? (
+              <button className="btn btn-primary" style={{ width: "100%", height: "38px" }} onClick={onManagePlan}>
+                Upgrade Plan
+              </button>
+            ) : (
+              <>
+                <button className="btn btn-ghost" style={{ flex: 1, height: "38px" }} onClick={onTopUp}>
+                  Top Up
+                </button>
+                <button className="btn btn-primary" style={{ flex: 1, height: "38px" }} onClick={onManagePlan}>
+                  Manage Plan
+                </button>
+              </>
+            )}
           </div>
         </div>
 
         {/* Subscription Details */}
-        {status && status.plan !== "free" && (
-          <div className="card">
-            <div className="card-label">Subscription Details</div>
-            <Row label="Plan" value={<span className={`badge badge-${status.plan}`} style={{ background: "rgba(245,158,11,.1)", color: "#d97706", border: "1px solid rgba(245,158,11,.15)" }}>{status.plan.toUpperCase()}</span>} />
-            <Row label="Status" value={
-              <span style={{ color: "#16a34a", fontWeight: 600 }}>
-                ● Active
-              </span>
-            } />
-            <Row label="Billing Cycle" value="Monthly" />
-            <Row label={dateRowLabel} value={dateRowValue} />
-            <Row label="Days Left" value={status.daysLeft} />
-            {isDowngradeScheduled && !isCancelling && <Row label="Scheduled Change" value={<span style={{ color: "var(--brand-light)" }}>→ Starter</span>} />}
+        <div className="card">
+          <div className="card-label">Subscription Details</div>
+          <Row label="Plan Type" value={<span className={`badge badge-${plan}`}>{plan.toUpperCase()}</span>} />
+          <Row
+            label="Account Status"
+            value={
+              isFree ? (
+                <span style={{ color: "var(--c-text-2)", fontWeight: "600" }}>Free Tier</span>
+              ) : isCancelling ? (
+                <span style={{ color: "#f59e0b", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#f59e0b" }} /> Cancelling
+                </span>
+              ) : status?.isActive ? (
+                <span style={{ color: "var(--brand)", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--brand)" }} /> Active
+                </span>
+              ) : (
+                <span style={{ color: "#ef4444", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#ef4444" }} /> Inactive
+                </span>
+              )
+            }
+          />
+          <Row label="Billing Cycle" value={isFree ? "—" : "Monthly"} />
+          <Row label={isFree ? "Next Renewal" : dateRowLabel} value={isFree ? "—" : (dateRowValue || "—")} />
+          <Row
+            label="Days Remaining"
+            value={
+              isFree ? (
+                "—"
+              ) : (
+                <span style={{ color: "var(--brand)", fontWeight: "700" }}>
+                  {status?.daysLeft != null ? `${status.daysLeft} ${status.daysLeft === 1 ? "Day" : "Days"}` : "—"}
+                </span>
+              )
+            }
+          />
+        </div>
 
-            <div style={{ marginTop: 12 }}>
-              {!portalOpen && (
-                <button className="btn btn-block" onClick={() => setPortalOpen(true)}>
-                  <ExternalLink size={13} /> Manage Billing
-                </button>
-              )}
-              {portalLoading && <div className="skeleton" style={{ width: "100%", height: 36, borderRadius: 9 }} />}
-              {portalError && <div className="banner banner-danger" style={{ marginTop: 8 }}>Couldn't load billing portal. Try again.</div>}
-              {portalUrls && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                  <button className="btn btn-block" onClick={() => openExternal(portalUrls.portalUrl)}><ExternalLink size={13} />View Billing</button>
-                  <button className="btn btn-block" onClick={() => openExternal(portalUrls.updatePaymentUrl)}><CreditCard size={13} />Update Payment Method</button>
-                  {isCancelling ? (
-                    <button className="btn btn-success btn-block" onClick={handleReactivate} disabled={submittingAction !== null}>
-                      <RefreshCw size={13} style={{ animation: submittingAction === "reactivate" ? "spin 0.8s linear infinite" : undefined }} />
-                      {submittingAction === "reactivate" ? "Reactivating..." : "Reactivate Subscription"}
-                    </button>
-                  ) : (
-                    <button className="btn btn-danger btn-block" onClick={handleCancel} disabled={submittingAction !== null}>
-                      <X size={13} />
-                      {submittingAction === "cancel" ? "Cancelling..." : "Cancel Subscription"}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+
+        {/* Manage Billing Button */}
+        {!isFree && (
+          <button
+            className="btn btn-block"
+            style={{ height: "42px", borderRadius: "12px", background: "var(--c-bg-2)", border: "1px solid var(--c-border)", fontWeight: "700" }}
+            onClick={() => setPortalOpen(true)}>
+            Manage Billing & Invoice
+          </button>
         )}
       </div>
       <div className="pane-footer">
@@ -250,7 +236,7 @@ export function AccountScreen({ onManagePlan, onTopUp, openExternal, watching, o
         <a href="#" onClick={(e) => { e.preventDefault(); openExternal("https://explified.com/terms-of-service"); }}>Terms</a> ·{" "}
         <a href="#" onClick={(e) => { e.preventDefault(); openExternal("mailto:support@explified.com"); }}>Support</a>
         <br />
-        Built by Explified 
+        Built by Explified
       </div>
     </>
   );

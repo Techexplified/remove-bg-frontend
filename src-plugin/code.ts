@@ -1,15 +1,64 @@
-figma.showUI(__html__, { width: 540, height: 700, themeColors: false });
+figma.showUI(__html__, { width: 400, height: 700, themeColors: false });
+
+let cachedUserId: string | null = null;
+let cachedDisplayName: string = "Figma User";
+let cachedPlanStatus: unknown = null;
+
+// Initialize persistent status storage in background
+void (async () => {
+  try {
+    cachedPlanStatus = await figma.clientStorage.getAsync("removebg_plan_status");
+    if (cachedPlanStatus) {
+      figma.ui.postMessage({ type: "cached-plan-status", payload: cachedPlanStatus });
+    }
+  } catch {}
+})();
 
 // Send user identity to UI immediately and on retry requests
-function sendUserIdentity() {
+async function sendUserIdentity() {
+  if (cachedUserId) {
+    figma.ui.postMessage({
+      type: "figma-user-id",
+      payload: cachedUserId,
+      displayName: cachedDisplayName,
+      cachedStatus: cachedPlanStatus
+    });
+    return;
+  }
+
+  let userId = figma.currentUser?.id ?? null;
+  const displayName = figma.currentUser?.name ?? "Figma User";
+
+  if (!userId) {
+    try {
+      userId = await figma.clientStorage.getAsync("removebg_user_id");
+      if (!userId) {
+        userId = `anon_${Math.random().toString(36).substring(2, 9)}_${Date.now().toString(36)}`;
+        await figma.clientStorage.setAsync("removebg_user_id", userId);
+      }
+    } catch {
+      userId = `anon_${Date.now().toString(36)}`;
+    }
+  }
+
+  if (!cachedPlanStatus) {
+    try {
+      cachedPlanStatus = await figma.clientStorage.getAsync("removebg_plan_status");
+    } catch {}
+  }
+
+  cachedUserId = userId;
+  cachedDisplayName = displayName;
+
   figma.ui.postMessage({
     type: "figma-user-id",
-    payload: figma.currentUser?.id ?? null,
-    displayName: figma.currentUser?.name ?? ""
+    payload: userId,
+    displayName,
+    cachedStatus: cachedPlanStatus
   });
 }
 
-sendUserIdentity();
+void sendUserIdentity();
 
 type SelectionInfo =
   | { hasSelection: false }
@@ -27,9 +76,17 @@ function getSelectionInfo(): SelectionInfo {
   return { hasSelection: true, name: sel.length === 1 ? first.name : `${sel.length} layers`, width: w, height: h, count: sel.length, pixelCount: w * h };
 }
 
+let previewDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
 function broadcastSelection() {
   figma.ui.postMessage({ type: "selection-changed", payload: getSelectionInfo() });
-  void pushPreview();
+  if (previewDebounceTimer !== null) {
+    clearTimeout(previewDebounceTimer);
+  }
+  previewDebounceTimer = setTimeout(() => {
+    previewDebounceTimer = null;
+    void pushPreview();
+  }, 80);
 }
 
 broadcastSelection();
@@ -39,9 +96,10 @@ async function pushPreview() {
   const sel = figma.currentPage.selection.filter(isExportable);
   if (sel.length === 0) { figma.ui.postMessage({ type: "preview-update", payload: null }); return; }
   try {
-    // Wait 150ms to ensure Figma finishes compiling and rendering the image paints/fills
-    await new Promise(resolve => setTimeout(resolve, 150));
-    const bytes = await sel[0].exportAsync({ format: "JPG", constraint: { type: "SCALE", value: 1 } });
+    // Constrain preview to max 500px for snappy transfer and rendering
+    const maxDim = Math.max(sel[0].width, sel[0].height);
+    const scale = maxDim > 500 ? 500 / maxDim : 1;
+    const bytes = await sel[0].exportAsync({ format: "JPG", constraint: { type: "SCALE", value: scale } });
     figma.ui.postMessage({ type: "preview-update", payload: bytes });
   } catch { figma.ui.postMessage({ type: "preview-update", payload: null }); }
 }
@@ -50,7 +108,7 @@ figma.ui.onmessage = async (msg: { type: string;[k: string]: unknown }) => {
   switch (msg.type) {
     case "request-selection": broadcastSelection(); break;
     case "request-preview": void pushPreview(); break;
-    case "request-user-id": sendUserIdentity(); break;
+    case "request-user-id": void sendUserIdentity(); break;
 
     case "export-selected-image": {
       const sel = figma.currentPage.selection.filter(isExportable);
@@ -72,7 +130,7 @@ figma.ui.onmessage = async (msg: { type: string;[k: string]: unknown }) => {
         rect.fills = [{ type: "IMAGE", imageHash: img.hash, scaleMode: "FILL" }];
         rect.x = figma.viewport.center.x - width / 2;
         rect.y = figma.viewport.center.y - height / 2;
-        rect.name = "ZeroBG result";
+        rect.name = "RemoveBG result";
         figma.currentPage.appendChild(rect);
         figma.currentPage.selection = [rect];
         figma.viewport.scrollAndZoomIntoView([rect]);
@@ -218,6 +276,14 @@ figma.ui.onmessage = async (msg: { type: string;[k: string]: unknown }) => {
         const bytes = await (node as SceneNode & ExportMixin).exportAsync({ format: "PNG" });
         figma.ui.postMessage({ type: "export-node-result", payload: { requestId, bytes } });
       } catch (e) { figma.ui.postMessage({ type: "export-node-result", payload: { requestId, error: e instanceof Error ? e.message : "Failed." } }); }
+      break;
+    }
+
+    case "persist-plan-status": {
+      cachedPlanStatus = msg.payload;
+      try {
+        void figma.clientStorage.setAsync("removebg_plan_status", msg.payload);
+      } catch {}
       break;
     }
 

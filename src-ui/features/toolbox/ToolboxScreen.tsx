@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Image as ImageIcon, Check, RefreshCw, AlertCircle, Loader } from "lucide-react";
-import { useAppSelector } from "../../app/hooks";
+import { useAppDispatch, useAppSelector } from "../../app/hooks";
+import { setSection } from "../../app/slices/uiSlice";
 import type { SelectionNodeRef } from "../../shared/types/messages";
 
 interface Props {
@@ -10,10 +11,10 @@ interface Props {
     backgroundPreset?: string,
     imageFilterPreset?: string
   ) => void;
-  onResize: (w: number, h: number) => void;
-  listSelection: () => Promise<SelectionNodeRef[]>;
-  exportNode: (id: string) => Promise<Uint8Array>;
-  insertResultImage: (bytes: Uint8Array) => void;
+  onResize?: (w: number, h: number) => void;
+  listSelection?: () => Promise<SelectionNodeRef[]>;
+  exportNode?: (id: string) => Promise<Uint8Array>;
+  insertResultImage?: (bytes: Uint8Array) => void;
   notify: (msg: string) => void;
 }
 
@@ -147,7 +148,15 @@ function extractDominantColors(img: HTMLImageElement, count: number): string[] {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export function ToolboxScreen({ onApplyAdjustments, notify }: Props) {
+export function ToolboxScreen({
+  onApplyAdjustments,
+  onResize: _onResize,
+  listSelection: _listSelection,
+  exportNode: _exportNode,
+  insertResultImage: _insertResultImage,
+  notify,
+}: Props) {
+  const dispatch = useAppDispatch();
   const { selection, previewUrl, originalUrl } = useAppSelector(s => s.figma);
 
   const [activePreview, setActivePreview] = useState<"result" | "original">("result");
@@ -280,9 +289,17 @@ export function ToolboxScreen({ onApplyAdjustments, notify }: Props) {
 
   return (
     <>
-      <div className="pane-header">
-        <h2>Toolbox</h2>
-        <p>Refine your result</p>
+      <div className="pane-header" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <button
+          onClick={() => dispatch(setSection("features"))}
+          style={{ background: "none", border: "none", color: "var(--c-text)", cursor: "pointer", fontSize: "16px", fontWeight: "700", display: "flex", alignItems: "center" }}
+          title="Back to Home">
+          ←
+        </button>
+        <div>
+          <h2 style={{ fontSize: "16px", fontWeight: "800", color: "var(--c-text)", margin: 0 }}>Design System</h2>
+          <p style={{ fontSize: "11px", color: "var(--c-text-3)", margin: 0 }}>Refine your result</p>
+        </div>
       </div>
 
       <div className="pane-body">

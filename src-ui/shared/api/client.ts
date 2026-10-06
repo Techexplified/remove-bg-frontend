@@ -201,7 +201,7 @@ export async function runFeature(
     : await apiFetch(path, {
         method: "POST",
         headers: { "Content-Type": "application/octet-stream" },
-        body: new Blob([(imageBytes ?? new Uint8Array()) as unknown as ArrayBufferView<ArrayBuffer>]),
+        body: new Blob([imageBytes ?? new Uint8Array()]),
       });
 
   if (!response.ok) {
@@ -259,7 +259,7 @@ export async function runAiTrial(imageBytes: Uint8Array): Promise<Uint8Array> {
   const response = await apiFetch("/api/features/ai-trial", {
     method: "POST",
     headers: { "Content-Type": "application/octet-stream" },
-    body: new Blob([imageBytes as unknown as ArrayBufferView<ArrayBuffer>]),
+    body: new Blob([imageBytes]),
   });
   if (!response.ok) {
     const e = await parseError(response);

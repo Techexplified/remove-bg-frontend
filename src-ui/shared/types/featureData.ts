@@ -6,8 +6,8 @@ export const PRIMARY_FEATURE: FeatureDef = {
 };
 
 export const STARTER_FEATURES: FeatureDef[] = [
-  { id: "crop_resize", label: "Crop and Resize", description: "Resize to any dimension", icon: "Crop", credits: 1, needsInputImage: true, needsPrompt: false, minPlan: "starter", needsOutputSize: true },
-  { id: "color_background_fill", label: "Color Background", description: "Add a solid color backdrop", icon: "Palette", credits: 1, needsInputImage: true, needsPrompt: false, minPlan: "starter", needsColor: true, badge: "Popular" },
+  { id: "crop_resize", label: "Crop and Resize", description: "Resize to any dimension", icon: "Crop", credits: 1, needsInputImage: true, needsPrompt: false, minPlan: "free", needsOutputSize: true },
+  { id: "color_background_fill", label: "Color Background", description: "Add a solid color backdrop", icon: "Palette", credits: 1, needsInputImage: true, needsPrompt: false, minPlan: "free", needsColor: true, badge: "Popular" },
 ];
 
 export const PRO_FEATURES: FeatureDef[] = [
@@ -23,7 +23,7 @@ export const PRO_FEATURES: FeatureDef[] = [
 export const ALL_FEATURES: FeatureDef[] = [PRIMARY_FEATURE, ...STARTER_FEATURES, ...PRO_FEATURES];
 
 export const PLAN_RANK: Record<string, number> = { free: 0, starter: 1, pro: 2 };
-export const PLAN_LIMITS: Record<string, number> = { free: 2, starter: 40, pro: 300 };
+export const PLAN_LIMITS: Record<string, number> = { free: 10, starter: 40, pro: 200 };
 
 export function isFeatureUnlocked(feature: FeatureDef, plan: string): boolean {
   return PLAN_RANK[plan] >= PLAN_RANK[feature.minPlan];
@@ -88,8 +88,8 @@ export const FAQ_DATA = [
   // PAYMENTS & BILLING
   {
     category: "Payments & Billing",
-    question: "Why does my bank statement show \"Dodo Payments\" instead of Explified or ZeroBG?",
-    answer: "Dodo Payments is our payment processor and handles all transactions on our behalf. When you subscribe to ZeroBG, the charge on your bank statement will appear as \"Dodo Payments\" — this is completely normal and confirms your payment was processed successfully. For any questions, contact us at support@explified.com and we'll help you directly."
+    question: "Why does my bank statement show \"Dodo Payments\" instead of Explified or RemoveBG?",
+    answer: "Dodo Payments is our payment processor and handles all transactions on our behalf. When you subscribe to RemoveBG, the charge on your bank statement will appear as \"Dodo Payments\" — this is completely normal and confirms your payment was processed successfully. For any questions, contact us at support@explified.com and we'll help you directly."
   },
   {
     category: "Payments & Billing",
@@ -138,7 +138,7 @@ export const FAQ_DATA = [
   {
     category: "Cancellation",
     question: "How do I cancel my subscription?",
-    answer: "Open the ZeroBG plugin in Figma, go to your plan details, tap Manage Plan, then Cancel Subscription. You'll be taken to our secure billing portal to confirm. Alternatively, email support@explified.com and we'll cancel it for you."
+    answer: "Open the RemoveBG plugin in Figma, go to your plan details, tap Manage Plan, then Cancel Subscription. You'll be taken to our secure billing portal to confirm. Alternatively, email support@explified.com and we'll cancel it for you."
   },
   {
     category: "Cancellation",
@@ -208,8 +208,8 @@ export const FAQ_DATA = [
   // PRIVACY & DATA
   {
     category: "Privacy & Data",
-    question: "What data does the ZeroBG plugin collect?",
-    answer: "When you open the ZeroBG plugin in Figma, we automatically collect your Figma user ID and display name to create and manage your account. This information is provided directly by Figma — we do not ask you to log in or create a separate account. Your Figma user ID does not include your email address or any other personal information unless you provide it during checkout."
+    question: "What data does the RemoveBG plugin collect?",
+    answer: "When you open the RemoveBG plugin in Figma, we automatically collect your Figma user ID and display name to create and manage your account. This information is provided directly by Figma — we do not ask you to log in or create a separate account. Your Figma user ID does not include your email address or any other personal information unless you provide it during checkout."
   },
   {
     category: "Privacy & Data",
@@ -219,7 +219,7 @@ export const FAQ_DATA = [
   {
     category: "Privacy & Data",
     question: "Is my Figma user ID linked to my personal information?",
-    answer: "Your Figma user ID and display name are stored in our database solely to operate the ZeroBG service. We do not sell, share, or use this information for any purpose other than managing your account. Your email address is only collected if you provide it during checkout via Dodo Payments, our payment processor, and is used for billing and receipt purposes only."
+    answer: "Your Figma user ID and display name are stored in our database solely to operate the RemoveBG service. We do not sell, share, or use this information for any purpose other than managing your account. Your email address is only collected if you provide it during checkout via Dodo Payments, our payment processor, and is used for billing and receipt purposes only."
   },
   {
     category: "Privacy & Data",
@@ -229,7 +229,7 @@ export const FAQ_DATA = [
   {
     category: "Privacy & Data",
     question: "Is my image data stored when I use a feature?",
-    answer: "Images you process through the ZeroBG plugin are sent to Photoroom, our AI image processing provider, solely to perform the requested operation. We do not store your images on our servers. Photoroom's own data handling policies apply to images processed through their API. Usage logs (feature name, credit cost, success/failure status) are retained for account management and support purposes only."
+    answer: "Images you process through the RemoveBG plugin are sent to Photoroom, our AI image processing provider, solely to perform the requested operation. We do not store your images on our servers. Photoroom's own data handling policies apply to images processed through their API. Usage logs (feature name, credit cost, success/failure status) are retained for account management and support purposes only."
   },
   {
     category: "Privacy & Data",

@@ -215,7 +215,7 @@ export function PlanPickerModal({ onCheckoutOpen, onScheduled }: Props) {
             <div className="modal-head" style={{ borderBottom: "none", paddingBottom: "10px" }}>
               <div>
                 <div className="modal-title" style={{ fontSize: "16px", fontWeight: "700" }}>Upgrade to Pro</div>
-                <div className="modal-sub">Unlock everything in ZeroBG</div>
+                <div className="modal-sub">Unlock everything in RemoveBG</div>
               </div>
               <button className="modal-close" onClick={() => dispatch(closeModal())} style={{ color: "var(--c-text-3)" }}><X size={16} /></button>
             </div>
@@ -265,119 +265,122 @@ export function PlanPickerModal({ onCheckoutOpen, onScheduled }: Props) {
       <motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={handleDismiss}>
         <motion.div className="modal" initial={{ scale: .94, y: 4 }} animate={{ scale: 1, y: 0 }}
-          onClick={e => e.stopPropagation()} style={{ maxWidth: 335 }}>
-          <div className="modal-head" style={{ borderBottom: "1px solid rgba(255,255,255,.08)", padding: "12px 14px" }}>
-            <div>
-              <div className="modal-title" style={{ fontSize: "15px", fontWeight: 700, color: "#ffffff" }}>Choose a Plan</div>
-              <div className="modal-sub" style={{ fontSize: "10.5px", color: "rgba(255,255,255,.55)" }}>Unlock features and monthly credits</div>
-            </div>
-            <button className="modal-close" onClick={handleDismiss} style={{ color: "rgba(255,255,255,.4)" }}><X size={15} /></button>
-          </div>
-          <div className="modal-body" style={{ gap: "8px", padding: "10px 14px" }}>
-
-            {/* Pro card (featured/locked) */}
-            <div style={{
-              background: "rgba(255, 255, 255, 0.025)",
-              borderRadius: "14px",
-              border: "1px solid rgba(255, 255, 255, 0.07)",
-              padding: "10px 12px",
-              opacity: proLocked ? 0.6 : 1,
-              transition: "opacity 0.2s",
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                <span style={{ fontSize: "8.5px", fontWeight: "700", padding: "2px 7px", background: "rgba(255, 255, 255, 0.07)", borderRadius: "100px", color: "rgba(255, 255, 255, 0.55)", textTransform: "uppercase", letterSpacing: "0.03em" }}>★ Pro Plan</span>
-                {proLocked
-                  ? <span style={{ fontSize: "8.5px", fontWeight: "700", padding: "2px 7px", background: "rgba(255, 255, 255, 0.05)", borderRadius: "100px", color: "rgba(255, 255, 255, 0.4)", border: "1px solid rgba(255, 255, 255, 0.07)", display: "inline-flex", alignItems: "center", gap: 3 }}>🔒 Coming Soon</span>
-                  : <span style={{ fontSize: "8.5px", fontWeight: "700", padding: "2px 7px", background: "#fbbf24", borderRadius: "100px", color: "#000" }}>Most Popular</span>
-                }
-              </div>
-              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "2px" }}>
-                <span style={{ fontSize: "24px", fontWeight: "800", color: proLocked ? "rgba(255, 255, 255, 0.5)" : "#ffffff", lineHeight: 1 }}>$39</span>
-                <span style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.4)", marginLeft: "4px" }}>/month</span>
-              </div>
-              <div style={{ fontSize: "9.5px", color: "rgba(255, 255, 255, 0.4)", marginBottom: "6px" }}>300 credits/month · All 10 features</div>
-              <ul style={{ listStyle: "none", padding: 0, margin: "0 0 8px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 8px" }}>
-                {PRO_FEATURES.map(f => (
-                  <li key={f} style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "9.5px", color: "rgba(255, 255, 255, 0.45)" }}>
-                    <Check size={9} color="rgba(255, 255, 255, 0.25)" strokeWidth={2.5} style={{ flexShrink: 0 }} />
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <button
-                className="cta-btn"
-                style={{
-                  marginBottom: 0, height: "32px", display: "flex", gap: "5px", fontSize: "11px",
-                  background: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.07)",
-                  color: "rgba(255, 255, 255, 0.4)",
-                  boxShadow: "none",
-                  borderRadius: "9px",
-                  cursor: proLocked ? "not-allowed" : "pointer",
-                }}
-                disabled={isLoading || proLocked}
-                title={proLocked ? "Pro plan coming soon" : undefined}
-                onClick={() => !proLocked && handleChoose("pro")}
-              >
-                <ArrowRight size={13} />
-                {proLocked ? "Coming Soon" : loadingPlan === "pro" ? "Processing…" : "Get Pro — $39/mo"}
+          onClick={e => e.stopPropagation()} style={{ maxWidth: 360, width: "calc(100% - 24px)", background: "var(--surface-1)", border: "1px solid var(--c-border-2)", borderRadius: "18px", padding: "18px" }}>
+          
+          {/* Header */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <button onClick={handleDismiss} style={{ background: "none", border: "none", color: "var(--c-text)", cursor: "pointer", fontSize: "14px", fontWeight: "700" }}>
+                ←
               </button>
+              <div style={{ fontSize: "15px", fontWeight: "800", color: "var(--c-text)" }}>Choose Plan</div>
+            </div>
+            <button className="modal-close" onClick={handleDismiss} style={{ color: "var(--c-text-3)", background: "none", border: "none", cursor: "pointer" }}><X size={16} /></button>
+          </div>
+
+          <div className="modal-body" style={{ gap: "10px", padding: 0 }}>
+            {/* FREE Card */}
+            <div style={{ background: "var(--c-card)", border: "1px solid var(--c-border)", borderRadius: "14px", padding: "12px 14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ fontSize: "13px", fontWeight: "800", color: "var(--c-text)" }}>FREE</span>
+                  <span style={{ fontSize: "10px", color: "var(--c-text-3)" }}>10 credits/mo</span>
+                </div>
+                <span style={{ fontSize: "8.5px", fontWeight: "700", padding: "2px 7px", background: "rgba(0, 0, 0, 0.05)", borderRadius: "100px", color: "var(--c-text-3)" }}>CURRENT PLAN</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                {["Remove BG (Standard)", "Basic Crop and Resize", "Community support"].map(item => (
+                  <div key={item} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "10.5px", color: "var(--c-text-2)" }}>
+                    <Check size={11} color="var(--brand)" /> {item}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Starter card — featured active card */}
-            <div style={{
-              background: "linear-gradient(180deg, rgba(108,71,255,0.14) 0%, rgba(108,71,255,0.04) 100%)",
-              borderRadius: "14px",
-              border: "1.5px solid rgba(108,71,255,0.45)",
-              padding: "12px 14px",
-              boxShadow: "0 6px 24px rgba(108,71,255,0.18)",
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                <span style={{ fontSize: "8.5px", fontWeight: "700", padding: "2px 7px", background: "var(--brand)", borderRadius: "100px", color: "white", textTransform: "uppercase", letterSpacing: "0.03em" }}>★ Starter Plan</span>
-                <span style={{ fontSize: "8.5px", fontWeight: "700", padding: "2px 7px", background: "rgba(16,185,129,0.15)", borderRadius: "100px", color: "#34d399", border: "1px solid rgba(16,185,129,0.3)", textTransform: "uppercase", letterSpacing: "0.03em" }}>Available Now</span>
+            {/* STARTER Card */}
+            <div style={{ background: "rgba(108, 71, 255, 0.04)", border: "1.5px solid var(--brand)", borderRadius: "14px", padding: "14px", boxShadow: "0 0 16px rgba(108, 71, 255, 0.12)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--brand)" }} />
+                  <span style={{ fontSize: "14px", fontWeight: "800", color: "var(--c-text)" }}>STARTER</span>
+                  <span style={{ fontSize: "10px", color: "var(--c-text-3)" }}>40 credits/mo</span>
+                </div>
+                <span style={{ fontSize: "8.5px", fontWeight: "800", padding: "2px 7px", background: "rgba(108, 71, 255, 0.12)", borderRadius: "100px", color: "var(--brand)", border: "1px solid rgba(108, 71, 255, 0.25)" }}>POPULAR</span>
               </div>
-              <div style={{ display: "flex", alignItems: "baseline", marginBottom: "2px" }}>
-                <span style={{ fontSize: "28px", fontWeight: "800", color: "#ffffff", lineHeight: 1 }}>$12</span>
-                <span style={{ fontSize: "10.5px", color: "rgba(255, 255, 255, 0.55)", marginLeft: "4px" }}>/month</span>
+              <div style={{ fontSize: "20px", fontWeight: "800", color: "var(--c-text)", marginBottom: "8px" }}>
+                $12 <span style={{ fontSize: "11px", color: "var(--c-text-3)", fontWeight: "400" }}>/ month</span>
               </div>
-              <div style={{ fontSize: "10px", color: "rgba(255, 255, 255, 0.55)", marginBottom: "8px" }}>40 credits/month · Basic features</div>
-              <ul style={{ listStyle: "none", padding: 0, margin: "0 0 10px" }}>
-                {STARTER_FEATURES.map(f => (
-                  <li key={f} style={{ display: "flex", alignItems: "center", gap: "7px", fontSize: "10.5px", color: "rgba(255, 255, 255, 0.9)", marginBottom: "4px" }}>
-                    <span style={{ width: "14px", height: "14px", borderRadius: "50%", background: "rgba(108,71,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#a78bfa", flexShrink: 0 }}>
-                      <Check size={9} strokeWidth={3} />
-                    </span>
-                    {f}
-                  </li>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginBottom: "12px" }}>
+                {STARTER_FEATURES.map(item => (
+                  <div key={item} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "10.5px", color: "var(--c-text-2)" }}>
+                    <Check size={11} color="var(--brand)" /> {item}
+                  </div>
                 ))}
-              </ul>
+              </div>
               <button
                 className="cta-btn"
-                style={{
-                  marginBottom: 0,
-                  height: "36px",
-                  borderRadius: "10px",
-                  fontSize: "11.5px",
-                  display: "flex",
-                  gap: "6px",
-                  background: "linear-gradient(135deg, #7c5cff, #5535e8)",
-                  color: "white",
-                  cursor: "pointer",
-                  fontWeight: 700,
-                  boxShadow: "0 4px 16px rgba(108,71,255,0.4)",
-                  border: "none",
-                }}
+                style={{ height: "40px", marginBottom: 0, background: "var(--brand)" }}
                 disabled={isLoading}
                 onClick={() => handleChoose("starter")}
               >
-                <ArrowRight size={13} />
-                {loadingPlan === "starter" ? "Processing…" : "Get Starter — $12/mo"}
+                {loadingPlan === "starter" ? "Processing…" : "Upgrade to Starter"}
               </button>
             </div>
 
-            <button onClick={handleDismiss} style={{ width: "100%", background: "transparent", border: "none", color: "rgba(255, 255, 255, 0.45)", padding: "4px 0 2px", fontSize: "11px", cursor: "pointer", fontWeight: 500, transition: "color 0.12s" }} onMouseEnter={e => e.currentTarget.style.color = "#fff"} onMouseLeave={e => e.currentTarget.style.color = "rgba(255, 255, 255, 0.45)"}>
-              Maybe Later
-            </button>
+            {/* PRO Card */}
+            <div style={{ background: "var(--c-card)", border: "1px solid var(--c-border)", borderRadius: "14px", padding: "14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ fontSize: "14px", fontWeight: "800", color: "var(--brand)" }}>PRO</span>
+                  <span style={{ fontSize: "10px", color: "var(--c-text-3)" }}>300 credits/mo</span>
+                </div>
+                {proLocked ? (
+                  <span style={{ fontSize: "8.5px", fontWeight: "800", padding: "2px 7px", background: "rgba(251, 191, 36, 0.15)", borderRadius: "100px", color: "#d97706", border: "1px solid rgba(251, 191, 36, 0.3)" }}>
+                    COMING SOON
+                  </span>
+                ) : (
+                  <span style={{ fontSize: "8.5px", fontWeight: "800", padding: "2px 7px", background: "var(--brand)", borderRadius: "100px", color: "#ffffff" }}>
+                    RECOMMENDED
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: "20px", fontWeight: "800", color: "var(--c-text)", marginBottom: "8px" }}>
+                $39 <span style={{ fontSize: "11px", color: "var(--c-text-3)", fontWeight: "400" }}>/ month</span>
+              </div>
+              <div style={{ fontSize: "10px", fontWeight: "700", color: "var(--brand)", marginBottom: "8px" }}>
+                300 credits included per month
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginBottom: "12px" }}>
+                {PRO_FEATURES.map(item => (
+                  <div key={item} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "10.5px", color: "var(--c-text-2)" }}>
+                    <Check size={11} color="var(--brand)" /> {item}
+                  </div>
+                ))}
+              </div>
+              {proLocked ? (
+                <button
+                  className="cta-btn"
+                  style={{ height: "40px", marginBottom: 0, opacity: 0.6, cursor: "not-allowed", background: "var(--c-bg-2)", color: "var(--c-text-3)", border: "1px solid var(--c-border)" }}
+                  disabled={true}
+                >
+                  Coming Soon
+                </button>
+              ) : (
+                <button
+                  className="cta-btn"
+                  style={{ height: "40px", marginBottom: 0 }}
+                  disabled={isLoading}
+                  onClick={() => handleChoose("pro")}
+                >
+                  {loadingPlan === "pro" ? "Processing…" : "Upgrade to Pro"}
+                </button>
+              )}
+            </div>
+
+            <div style={{ fontSize: "9.5px", color: "var(--c-text-3)", textAlign: "center", marginTop: "4px" }}>
+              Can switch plans anytime. <span style={{ color: "var(--c-text)", fontWeight: "700", textDecoration: "underline", cursor: "pointer" }}>View full comparison</span>
+              <div style={{ marginTop: "2px", color: "var(--c-text-4)" }}>Billing is handled securely through Figma.</div>
+            </div>
           </div>
         </motion.div>
       </motion.div>

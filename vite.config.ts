@@ -1,13 +1,17 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { viteSingleFile } from "vite-plugin-singlefile";
-import { renameSync } from "fs";
+import { renameSync, existsSync } from "fs";
 import path from "path";
 
 function renameToUiHtml() {
   return {
     name: "rename-to-ui-html",
-    closeBundle() { renameSync("dist/index.html", "dist/ui.html"); }
+    closeBundle() {
+      if (existsSync("dist/index.html")) {
+        renameSync("dist/index.html", "dist/ui.html");
+      }
+    }
   };
 }
 

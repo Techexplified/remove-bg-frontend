@@ -24,9 +24,11 @@ export async function removeBackgroundLocal(imageBytes: Uint8Array): Promise<Uin
         const TOLERANCE = 30;
         const FEATHER = 20; // soft band beyond tolerance
 
-        // Flood fill from all edge pixels that match bg color
+        // Flood fill from all edge pixels that match bg color using true BFS (FIFO queue)
         const visited = new Uint8Array(width * height);
-        const queue: number[] = [];
+        const queue = new Int32Array(width * height);
+        let head = 0;
+        let tail = 0;
 
         const tryEnqueue = (x: number, y: number) => {
           const idx = y * width + x;
@@ -35,7 +37,7 @@ export async function removeBackgroundLocal(imageBytes: Uint8Array): Promise<Uin
           const dist = colorDistance([data[i], data[i + 1], data[i + 2]], bgColor);
           if (dist < TOLERANCE) {
             visited[idx] = 1;
-            queue.push(idx);
+            queue[tail++] = idx;
           }
         };
 
@@ -48,8 +50,8 @@ export async function removeBackgroundLocal(imageBytes: Uint8Array): Promise<Uin
           tryEnqueue(width - 1, y);
         }
 
-        while (queue.length) {
-          const idx = queue.pop()!;
+        while (head < tail) {
+          const idx = queue[head++];
           const x = idx % width;
           const y = (idx / width) | 0;
           const neighbors = [
@@ -63,7 +65,7 @@ export async function removeBackgroundLocal(imageBytes: Uint8Array): Promise<Uin
             const dist = colorDistance([data[i], data[i + 1], data[i + 2]], bgColor);
             if (dist < TOLERANCE) {
               visited[nIdx] = 1;
-              queue.push(nIdx);
+              queue[tail++] = nIdx;
             } else if (dist < TOLERANCE + FEATHER) {
               // soft edge: partially transparent, don't propagate further
               const t = (dist - TOLERANCE) / FEATHER; // 0 (bg-like) -> 1 (subject-like)
@@ -106,31 +108,50 @@ function estimateBackgroundColor(
   height: number
 ): [number, number, number] {
   const samples: [number, number, number][] = [];
-  const step = Math.max(1, Math.floor(width / 20));
+  const stepX = Math.max(1, Math.floor(width / 20));
+  const stepY = Math.max(1, Math.floor(height / 20));
 
-  for (let x = 0; x < width; x += step) {
+  for (let x = 0; x < width; x += stepX) {
     samples.push(getPixel(data, width, x, 0));
     samples.push(getPixel(data, width, x, height - 1));
   }
-  for (let y = 0; y < height; y += Math.max(1, Math.floor(height / 20))) {
+  for (let y = 0; y < height; y += stepY) {
     samples.push(getPixel(data, width, 0, y));
     samples.push(getPixel(data, width, width - 1, y));
   }
 
-  // average of samples close to the median-ish cluster (simple mode approximation)
-  let best = samples[0];
-  let bestScore = -1;
-  for (const s of samples) {
-    let score = 0;
-    for (const other of samples) {
-      if (colorDistance(s, other) < 20) score++;
+  if (samples.length === 0) return [255, 255, 255];
+
+  // BUG-11: O(n) bucket quantization (32 levels per channel) to find the mode background color
+  const buckets = new Map<number, { count: number; rSum: number; gSum: number; bSum: number }>();
+  let maxCount = -1;
+  let bestKey = -1;
+
+  for (const [r, g, b] of samples) {
+    const key = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+    let entry = buckets.get(key);
+    if (!entry) {
+      entry = { count: 0, rSum: 0, gSum: 0, bSum: 0 };
+      buckets.set(key, entry);
     }
-    if (score > bestScore) {
-      bestScore = score;
-      best = s;
+    entry.count++;
+    entry.rSum += r;
+    entry.gSum += g;
+    entry.bSum += b;
+    if (entry.count > maxCount) {
+      maxCount = entry.count;
+      bestKey = key;
     }
   }
-  return best;
+
+  const bestEntry = buckets.get(bestKey);
+  if (!bestEntry || bestEntry.count === 0) return samples[0];
+
+  return [
+    Math.round(bestEntry.rSum / bestEntry.count),
+    Math.round(bestEntry.gSum / bestEntry.count),
+    Math.round(bestEntry.bSum / bestEntry.count),
+  ];
 }
 
 function getPixel(data: Uint8ClampedArray, width: number, x: number, y: number): [number, number, number] {
@@ -139,9 +160,5 @@ function getPixel(data: Uint8ClampedArray, width: number, x: number, y: number):
 }
 
 function colorDistance(c1: [number, number, number], c2: [number, number, number]): number {
-  return Math.sqrt(
-    Math.pow(c1[0] - c2[0], 2) +
-    Math.pow(c1[1] - c2[1], 2) +
-    Math.pow(c1[2] - c2[2], 2)
-  );
+  return Math.hypot(c1[0] - c2[0], c1[1] - c2[1], c1[2] - c2[2]);
 }

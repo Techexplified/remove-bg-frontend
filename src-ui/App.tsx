@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from "react";
+import React, { useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Provider } from "react-redux";
 import { store } from "./app/store";
@@ -19,7 +19,7 @@ import { ToolboxScreen } from "./features/toolbox/ToolboxScreen";
 import { SettingsScreen } from "./features/settings/SettingsScreen";
 import { ExitIntentQuestion } from "./shared/components/feedback/ExitIntentQuestion";
 import { ReviewPrompt } from "./shared/components/feedback/ReviewPrompt";
-import { usePluginBridge } from "./shared/hooks/usePluginBridge";
+import { PluginBridgeProvider, usePluginBridgeContext } from "./shared/context/PluginBridgeContext";
 import { useCheckoutWatcher } from "./shared/hooks/useCheckoutWatcher";
 import { loadPlanStatus, deductCredits } from "./app/slices/statusSlice";
 import { setOriginalUrl } from "./app/slices/figmaSlice";
@@ -85,7 +85,7 @@ function AppReady() {
     }
   }, [checkoutOverlay.visible, checkoutWatcher]);
 
-  const bridge = usePluginBridge();
+  const bridge = usePluginBridgeContext();
   const lastFeatureRef = useRef<FeatureDef | null>(null);
   const lastInputBytesRef = useRef<Uint8Array | null>(null);
 
@@ -126,12 +126,10 @@ function AppReady() {
         }
       }
       let result: Uint8Array;
-      if (feature.id === "remove_bg_basic" && status.credits < 1 && imageBytes) {
+      if (feature.id === "remove_bg_basic" && status.credits < 1 && imageBytes && status.plan === "pro") {
         dispatch(setProcessing({ stage: "processing", featureLabel: feature.label + " (Local Fallback)" }));
         result = await removeBackgroundLocal(imageBytes);
       } else {
-        dispatch(setProcessing({ stage: "uploading", featureLabel: feature.label }));
-        await new Promise(r => setTimeout(r, 250));
         dispatch(setProcessing({ stage: "processing", featureLabel: feature.label }));
         result = await runFeature(feature.id as FeatureId, imageBytes, opts);
       }
@@ -251,7 +249,9 @@ function AppReady() {
         });
       }
     }
-  }, [status, dispatch, runFeature, bridge, toast]);
+  // BUG-06 fix: `runFeature` is a plain module-level import — it never changes,
+  // so it must not be in the dep array (causes spurious hook re-creations).
+  }, [status, dispatch, bridge, toast]);
 
   function handleRunFeature(feature: FeatureDef, localBytes?: Uint8Array) {
     if (!status) return;
@@ -275,21 +275,20 @@ function AppReady() {
       }
     }
     if (spendable < feature.credits) {
-      if (feature.id === "remove_bg_basic") {
-        toast("warning", "You're out of credits",
-          "now you upgrade your plan to get high quality results.", {
-            label: status.plan === "free" ? "Upgrade Plan" : "+ Top Up Credits",
-            action: status.plan === "free" ? "manage_plan" : "topup",
-          });
-        // Proceed with fallback execution
-      } else {
-        toast("warning", "You're out of credits",
-          `This feature costs ${feature.credits} credit${feature.credits > 1 ? "s" : ""}. You have ${spendable}.`, {
-            label: status.plan === "free" ? "Upgrade Plan" : "+ Top Up Credits",
-            action: status.plan === "free" ? "manage_plan" : "topup",
-          });
+      if (feature.id === "remove_bg_basic" || feature.id === "color_background_fill" || feature.id === "crop_resize") {
+        dispatch(openModal({ kind: "plan_picker" }));
+        toast("warning", "0 credits left", "You've used all 10 free credits. Get Pro to continue using Remove Background, Color Background, and Crop & Resize.", {
+          label: "Get Pro",
+          action: "manage_plan",
+        });
         return;
       }
+      toast("warning", "You're out of credits",
+        `This feature costs ${feature.credits} credit${feature.credits > 1 ? "s" : ""}. You have ${spendable}.`, {
+          label: status.plan === "free" ? "Upgrade Plan" : "+ Top Up Credits",
+          action: status.plan === "free" ? "manage_plan" : "topup",
+        });
+      return;
     }
     void executeFeature(feature, {}, localBytes);
   }
@@ -402,7 +401,10 @@ function AppShell() {
   const dispatch = useAppDispatch();
   const hasReceivedUserId = useAppSelector(s => s.figma.hasReceivedUserId);
   const userId = useAppSelector(s => s.figma.userId);
-  const bridge = usePluginBridge();
+  // BUG-07 fix: use the shared context bridge instead of creating a new hook instance.
+  // Previously AppShell and AppReady each called usePluginBridge(), registering
+  // a second window.message listener while AppReady was mounted.
+  const bridge = usePluginBridgeContext();
 
   // On every plugin open: clear the stale session token so the first /status
   // call goes without a bearer token (first-call semantics per the handoff doc).
@@ -411,45 +413,73 @@ function AppShell() {
     resetSession();
   }, []);
 
-  // Retry getting user ID at 5s (handles timing race where UI ready before code.ts)
+  const status = useAppSelector(s => s.status.data);
+  const statusError = useAppSelector(s => s.status.error);
+
+  // Faster retry getting user ID at 250ms if handshake didn't arrive immediately
   useEffect(() => {
     if (hasReceivedUserId) return;
-    const retry = setTimeout(() => bridge.requestUserIdRetry(), 5000);
+    const retry = setTimeout(() => bridge.requestUserIdRetry(), 250);
     return () => clearTimeout(retry);
   }, [hasReceivedUserId, bridge]);
 
-  // Once we have the user ID, trigger the first /status fetch
+  // Once user identity is available (from cache or handshake), revalidate status in background
+  const hasFetchedRef = useRef(false);
   useEffect(() => {
-    if (!hasReceivedUserId || !userId) return;
+    if (!hasReceivedUserId) return;
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
     dispatch(loadPlanStatus());
-  }, [hasReceivedUserId, userId, dispatch]);
+  }, [hasReceivedUserId, dispatch]);
 
-  const isReady = hasReceivedUserId && !!userId;
+  // Fallback timer: if Figma message hasn't arrived within 1.2s, generate fallback identity so UI opens
+  useEffect(() => {
+    if (hasReceivedUserId) return;
+    const fallbackTimer = setTimeout(() => {
+      let uid = "";
+      try {
+        uid = localStorage.getItem("removebg_cached_user_id") || localStorage.getItem("removebg_anon_user_id") || localStorage.getItem("zerobg_anon_user_id") || "";
+        if (!uid) {
+          uid = `anon_${Math.random().toString(36).substring(2, 9)}_${Date.now().toString(36)}`;
+          localStorage.setItem("removebg_anon_user_id", uid);
+        }
+      } catch {
+        uid = `anon_${Date.now().toString(36)}`;
+      }
+      dispatch({ type: "figma/setUserIdentity", payload: { userId: uid, displayName: "Figma User" } });
+    }, 1200);
+    return () => clearTimeout(fallbackTimer);
+  }, [hasReceivedUserId, dispatch]);
+
+  // The UI is ready immediately once user identity is established.
+  // We NEVER block the entire plugin behind a full-screen "Connecting..." spinner for slow network calls!
+  // Credit balance syncs silently in the background.
+  const isReady = hasReceivedUserId;
   const [timedOut, setTimedOut] = React.useState(false);
 
   useEffect(() => {
     if (isReady) return;
-    const t = setTimeout(() => setTimedOut(true), 15000);
+    const t = setTimeout(() => setTimedOut(true), 6000);
     return () => clearTimeout(t);
   }, [isReady]);
 
   return (
     <div className="app">
-      <Sidebar />
       {!isReady && !timedOut && <LoadingScreen />}
-      {!isReady && timedOut && <ErrorScreen onRetry={() => bridge.requestUserIdRetry()} />}
+      {!isReady && timedOut && <ErrorScreen onRetry={() => { bridge.requestUserIdRetry(); dispatch(loadPlanStatus()); }} />}
       {isReady && <AppReady />}
     </div>
   );
 }
 
-// Need React for useState in AppShell
-import React from "react";
-
 export function App() {
   return (
     <Provider store={store}>
-      <AppShell />
+      {/* BUG-05 fix: PluginBridgeProvider registers window.message handler exactly once
+           at the root. All children use usePluginBridgeContext() to access the bridge. */}
+      <PluginBridgeProvider>
+        <AppShell />
+      </PluginBridgeProvider>
     </Provider>
   );
 }

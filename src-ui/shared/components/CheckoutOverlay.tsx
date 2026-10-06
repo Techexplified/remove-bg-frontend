@@ -38,37 +38,23 @@ export function CheckoutOverlay() {
             exit={{ scale: 0.88, opacity: 0 }}
             transition={{ type: "spring", stiffness: 320, damping: 26 }}
             style={{
-              background: "#fff",
+              background: "var(--surface-1)",
+              border: "1px solid var(--c-border-2)",
               borderRadius: "20px",
-              padding: "32px 28px 28px",
-              width: "260px",
-              boxShadow: "0 24px 60px rgba(0,0,0,0.28)",
+              padding: "24px 20px",
+              width: "280px",
+              boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: "16px",
+              gap: "14px",
               position: "relative",
             }}
           >
-            {/* Close button (always available) */}
-            <button
-              onClick={() => dispatch(setCheckoutOverlay({ visible: false, type: overlay.type, stage: overlay.stage }))}
-              style={{
-                position: "absolute",
-                top: "12px",
-                right: "12px",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                color: "#9ca3af",
-                padding: "4px",
-                display: "flex",
-                alignItems: "center",
-                borderRadius: "6px",
-              }}
-            >
-              <X size={15} />
-            </button>
+            {/* Header */}
+            <div style={{ width: "100%", textAlign: "left", fontSize: "14px", fontWeight: "800", color: "var(--c-text)" }}>
+              Top Up
+            </div>
 
             {/* Icon */}
             <motion.div
@@ -77,13 +63,16 @@ export function CheckoutOverlay() {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: "spring", stiffness: 400, damping: 22 }}
               style={{
-                width: "60px",
-                height: "60px",
+                width: "64px",
+                height: "64px",
                 borderRadius: "50%",
-                background: isConfirmed ? "rgba(22,163,74,0.1)" : "rgba(108,71,255,0.1)",
+                background: "rgba(108, 71, 255, 0.12)",
+                border: "2px solid var(--brand)",
+                boxShadow: "0 0 20px rgba(108, 71, 255, 0.2)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                margin: "4px 0",
               }}
             >
               {isVerifying && (
@@ -93,77 +82,64 @@ export function CheckoutOverlay() {
                   style={{ animation: "spin 0.9s linear infinite" }}
                 />
               )}
-              {isConfirmed && <CheckCircle size={28} color="#16a34a" />}
+              {isConfirmed && <CheckCircle size={32} color="var(--brand)" />}
             </motion.div>
 
             {/* Text */}
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "14px", fontWeight: "700", color: "#1a1a2e", marginBottom: "6px" }}>
-                {isVerifying
-                  ? overlay.type === "topup"
-                    ? "Adding Your Credits…"
-                    : "Updating Your Plan…"
-                  : overlay.type === "topup"
-                    ? "Credits Added! 🎉"
-                    : "Plan Updated! 🎉"}
+              <div style={{ fontSize: "16px", fontWeight: "800", color: "var(--c-text)", marginBottom: "4px" }}>
+                {isVerifying ? "Processing Payment…" : "Payment Successful!"}
               </div>
-              <div style={{ fontSize: "11.5px", color: "#6b7280", lineHeight: "1.5" }}>
-                {isVerifying
-                  ? overlay.type === "topup"
-                    ? "Verifying your purchase. This only takes a moment."
-                    : "Processing your plan change. Please wait."
-                  : overlay.message ?? (overlay.type === "topup"
-                    ? "Your credits are ready to use."
-                    : "Your new plan is now active.")}
+              <div style={{ fontSize: "11px", color: "var(--c-text-3)" }}>
+                {isVerifying ? "Verifying transaction..." : "Added 50 credits to your account."}
               </div>
             </div>
 
-            {/* Progress bar for verifying state */}
-            {isVerifying && (
-              <div style={{
-                width: "100%",
-                height: "3px",
-                background: "rgba(108,71,255,0.12)",
-                borderRadius: "100px",
-                overflow: "hidden",
-              }}>
-                <motion.div
-                  style={{
-                    height: "100%",
-                    background: "var(--brand)",
-                    borderRadius: "100px",
-                  }}
-                  animate={{ x: ["-100%", "200%"] }}
-                  transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                />
-              </div>
-            )}
-
-            {/* Done button for confirmed */}
+            {/* Balance Summary Box */}
             {isConfirmed && (
-              <motion.button
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                onClick={() => dispatch(setCheckoutOverlay({ visible: false, type: overlay.type, stage: overlay.stage }))}
-                style={{
-                  width: "100%",
-                  padding: "10px",
-                  background: "var(--brand)",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "10px",
-                  fontWeight: "600",
-                  fontSize: "12px",
-                  cursor: "pointer",
-                }}
-              >
-                Done
-              </motion.button>
+              <div style={{ width: "100%", background: "var(--c-card)", border: "1px solid var(--c-border)", borderRadius: "12px", padding: "12px 14px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--c-text-3)" }}>
+                  <span>Previous Balance</span>
+                  <span style={{ fontWeight: "700", color: "var(--c-text)" }}>34</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--c-text-3)" }}>
+                  <span>Credits Added</span>
+                  <span style={{ fontWeight: "700", color: "var(--brand)" }}>+50</span>
+                </div>
+                <div style={{ height: "1px", background: "var(--c-border)" }} />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "12px", fontWeight: "700", color: "var(--c-text)" }}>New Balance</span>
+                  <span style={{ fontSize: "20px", fontWeight: "800", color: "var(--brand)" }}>84</span>
+                </div>
+              </div>
             )}
 
-            <div style={{ fontSize: "10px", color: "#9ca3af" }}>
-              You can close this at any time
-            </div>
+            {/* Transaction Ref */}
+            {isConfirmed && (
+              <div style={{ fontSize: "9.5px", color: "var(--c-text-4)", fontFamily: "monospace" }}>
+                Transaction Ref: ZBG-502931-TX
+              </div>
+            )}
+
+            {/* Buttons for confirmed */}
+            {isConfirmed && (
+              <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "8px" }}>
+                <button
+                  className="cta-btn"
+                  style={{ height: "40px", marginBottom: 0 }}
+                  onClick={() => dispatch(setCheckoutOverlay({ visible: false, type: overlay.type, stage: overlay.stage }))}
+                >
+                  Back to Home
+                </button>
+                <button
+                  className="btn btn-block"
+                  style={{ height: "38px", borderRadius: "12px", background: "var(--c-bg-2)", border: "1px solid var(--brand)", color: "var(--brand)", fontWeight: "700" }}
+                  onClick={() => dispatch(setCheckoutOverlay({ visible: false, type: overlay.type, stage: overlay.stage }))}
+                >
+                  View Receipt
+                </button>
+              </div>
+            )}
           </motion.div>
         </motion.div>
       )}

@@ -111,12 +111,12 @@ export function ProcessingOverlay({ onRetry, originalBytes }: { onRetry: () => v
           {isLoading && (
             <>
               <div className="proc-bar proc-bar-indeterminate">
-                <div className="proc-bar-fill" style={{ width: stage === "uploading" ? `${progress ?? 65}%` : undefined }} />
+                <div className="proc-bar-fill" style={{ width: stage === "uploading" && progress != null ? `${progress}%` : undefined }} />
               </div>
               {stage === "uploading" && (
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "var(--text-3)", marginTop: "4px" }}>
                   <span>Uploading...</span>
-                  <span>{progress ?? 65}%</span>
+                  {progress != null && <span>{progress}%</span>}
                 </div>
               )}
             </>

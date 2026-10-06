@@ -7,7 +7,8 @@ export type PluginToUIMessage =
   | { type: "export-success"; payload: Uint8Array }
   | { type: "export-error"; payload: string }
   | { type: "insert-success" }
-  | { type: "figma-user-id"; payload: string | null; displayName?: string }
+  | { type: "figma-user-id"; payload: string | null; displayName?: string; cachedStatus?: unknown }
+  | { type: "cached-plan-status"; payload: unknown }
   | { type: "list-selection-result"; payload: SelectionNodeRef[] }
   | { type: "export-node-result"; payload: ExportNodeResult }
   | { type: "preview-update"; payload: Uint8Array | null };
@@ -22,6 +23,7 @@ export type UIToPluginMessage =
   | { type: "export-node-by-id"; requestId: string; nodeId: string }
   | { type: "resize-selection"; width: number; height: number }
   | { type: "apply-image-adjustments"; brightness: number; contrast: number; saturation: number }
+  | { type: "persist-plan-status"; payload: unknown }
   | { type: "open-external"; payload: string }
   | { type: "notify"; payload: string }
   | { type: "close-plugin" };

@@ -1,12 +1,74 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppDispatch } from "../../app/hooks";
 import { setPlanStatus } from "../../app/slices/statusSlice";
 import { fetchPlanStatus } from "../api/client";
 import type { PlanStatus } from "../types/api";
 
-const POLL_MS = 1500;       // poll every 1.5s for snappy credit arrival
-const FIRST_POLL_MS = 1000; // first check after 1s (payment webhook is usually fast)
-const MAX_POLLS = 120;      // ~3 minutes total
+const MAX_POLLS = 35; // ~2.3 minutes total with backoff
+
+function getPollDelay(index: number): number {
+  if (index === 0) return 1000;
+  if (index <= 5) return 1500;
+  if (index <= 15) return 3000;
+  return 5000;
+}
+
+/**
+ * Sleeps for `ms` milliseconds, pausing while document.hidden is true.
+ * Resolves with true if timer finished and loop is still active, false if cancelled early.
+ */
+function sleepWithVisibility(ms: number, isCurrent: () => boolean): Promise<boolean> {
+  return new Promise((resolve) => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let start = Date.now();
+    let remaining = ms;
+
+    const cleanup = () => {
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+
+    const done = () => {
+      cleanup();
+      resolve(isCurrent());
+    };
+
+    const schedule = (delay: number) => {
+      if (!isCurrent()) {
+        cleanup();
+        resolve(false);
+        return;
+      }
+      if (typeof document !== "undefined" && document.hidden) {
+        return;
+      }
+      start = Date.now();
+      timer = setTimeout(done, Math.max(0, delay));
+    };
+
+    const onVis = () => {
+      if (!isCurrent()) {
+        cleanup();
+        resolve(false);
+        return;
+      }
+      if (document.hidden) {
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+        remaining -= Date.now() - start;
+      } else {
+        schedule(remaining);
+      }
+    };
+
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVis);
+    }
+    schedule(ms);
+  });
+}
 
 export type WatchOutcome = "confirmed" | "timed_out" | "stopped";
 
@@ -27,6 +89,13 @@ export function useCheckoutWatcher() {
     setIsWatching(false);
   }, []);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      genRef.current++;
+    };
+  }, []);
+
   const start = useCallback(
     async (baseline: PlanStatus | null, opts: WatchOptions) => {
       genRef.current++;
@@ -34,11 +103,13 @@ export function useCheckoutWatcher() {
       setIsWatching(true);
 
       for (let i = 0; i < MAX_POLLS; i++) {
-        await new Promise((r) => setTimeout(r, i === 0 ? FIRST_POLL_MS : POLL_MS));
-        if (genRef.current !== myGen) {
+        const delay = getPollDelay(i);
+        const shouldContinue = await sleepWithVisibility(delay, () => genRef.current === myGen);
+        if (!shouldContinue || genRef.current !== myGen) {
           opts.onSettled("stopped");
           return;
         }
+
         try {
           const fresh = await fetchPlanStatus();
           if (genRef.current !== myGen) {
