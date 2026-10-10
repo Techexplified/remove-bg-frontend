@@ -11,7 +11,7 @@ export const STARTER_FEATURES: FeatureDef[] = [
 ];
 
 export const PRO_FEATURES: FeatureDef[] = [
-  { id: "hd_export", label: "HD Export", description: "High-resolution output", icon: "FileOutput", credits: 5, needsInputImage: true, needsPrompt: false, minPlan: "pro", needsOutputSize: true },
+  { id: "batch_process", label: "Batch Process", description: "Process multiple images at once", icon: "Copy", credits: 0, needsInputImage: false, needsPrompt: false, minPlan: "free", hasSubScreen: true },
   { id: "ai_background", label: "AI Background", description: "Generate AI scene backgrounds", icon: "Layers", credits: 5, needsInputImage: true, needsPrompt: false, minPlan: "pro", needsOutputSize: true, badge: "New" },
   { id: "ai_shadows", label: "AI Shadows", description: "Add realistic drop shadows", icon: "Sun", credits: 5, needsInputImage: true, needsPrompt: false, minPlan: "pro", needsOutputSize: true },
   { id: "ai_relighting", label: "AI Relighting", description: "Change lighting and mood", icon: "Lightbulb", credits: 5, needsInputImage: true, needsPrompt: false, minPlan: "pro", needsOutputSize: true, badge: "Popular" },

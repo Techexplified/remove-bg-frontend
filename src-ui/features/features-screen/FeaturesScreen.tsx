@@ -1,16 +1,16 @@
 import { useRef, useState, useCallback } from "react";
-import { ChevronRight, Sparkles, Crop, Palette, FileOutput, Layers, Sun, Lightbulb, ZoomIn, Wand2, PenTool, Upload, X, Image, Settings, SlidersHorizontal } from "lucide-react";
+import { Sparkles, Crop, Palette, FileOutput, Layers, Sun, Lightbulb, ZoomIn, Wand2, PenTool, Upload, Settings, SlidersHorizontal, Copy } from "lucide-react";
 import type { LucideProps } from "lucide-react";
 import type { FC } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { openModal, setAIFeature, setSection } from "../../app/slices/uiSlice";
-import { PRIMARY_FEATURE, STARTER_FEATURES, PRO_FEATURES, isFeatureUnlocked, PLAN_RANK, PLAN_LIMITS } from "../../shared/types/featureData";
+import { PRIMARY_FEATURE, STARTER_FEATURES, PRO_FEATURES, isFeatureUnlocked, PLAN_LIMITS } from "../../shared/types/featureData";
 import type { FeatureDef } from "../../shared/types/features";
 
 // Feature IDs that are AI/Pro-only and subject to the features lock
 const AI_FEATURE_IDS = new Set([
   "ai_background", "ai_shadows", "ai_relighting",
-  "hd_export", "ai_upscale", "ai_image_gen", "ai_logo_maker",
+  "ai_upscale", "ai_image_gen", "ai_logo_maker",
 ]);
 
 export interface Props {
@@ -22,7 +22,7 @@ export interface Props {
 }
 
 const ICON_MAP: Record<string, FC<LucideProps>> = {
-  Sparkles, Crop, Palette, FileOutput, Layers, Sun, Lightbulb, ZoomIn, Wand2, PenTool,
+  Sparkles, Crop, Palette, FileOutput, Layers, Sun, Lightbulb, ZoomIn, Wand2, PenTool, Copy,
 };
 
 function FeatureIcon({ name, size = 15 }: { name: string; size?: number }) {
@@ -44,12 +44,10 @@ type ImageSource = "canvas" | "local";
 
 const TARGET_PRO_FEATURE_IDS = new Set(["remove_bg_basic", "color_background_fill", "crop_resize"]);
 
-export function FeaturesScreen({ onRunFeature, onManagePlan, onTopUp, watching, onStopWatching }: Props) {
+export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
   const dispatch = useAppDispatch();
   const status = useAppSelector(s => s.status.data);
   const selection = useAppSelector(s => s.figma.selection);
-  const isBusy = useAppSelector(s => s.ui.processing.stage !== "idle" && s.ui.processing.stage !== "success" && s.ui.processing.stage !== "error");
-  const isStatusLoading = status === null;
   const plan = status?.plan ?? "free";
   const proLocked = status?.featuresLocked === true;
   const spendable = !status ? 0 : (status.credits + (plan === "pro" ? status.topupCreditsPro : status.topupCreditsStarter));
@@ -59,13 +57,11 @@ export function FeaturesScreen({ onRunFeature, onManagePlan, onTopUp, watching, 
   const daysLeft = status?.daysLeft ?? 0;
   // User has 0 credits left out of 10 and has not converted into Pro yet
   const isZeroCredits = !!status && plan !== "pro" && spendable <= 0;
-  const multiSel = selection.hasSelection && selection.count > 1;
-  const hasSel = selection.hasSelection;
+  const isStatusLoading = status === null;
 
   // ── Local image upload state ──
   const [imageSource, setImageSource] = useState<ImageSource>("canvas");
   const [localFile, setLocalFile] = useState<{ name: string; previewUrl: string; bytes: Uint8Array } | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = useCallback(async (file: File) => {
@@ -80,24 +76,14 @@ export function FeaturesScreen({ onRunFeature, onManagePlan, onTopUp, watching, 
     setImageSource("local");
   }, [localFile]);
 
-  function clearLocalFile() {
-    if (localFile) URL.revokeObjectURL(localFile.previewUrl);
-    setLocalFile(null);
-    setImageSource("canvas");
-  }
-
   // Drag events
-  function onDragOver(e: React.DragEvent) { e.preventDefault(); setIsDragging(true); }
-  function onDragLeave() { setIsDragging(false); }
+  function onDragOver(e: React.DragEvent) { e.preventDefault(); }
+  function onDragLeave() {}
   async function onDrop(e: React.DragEvent) {
     e.preventDefault();
-    setIsDragging(false);
     const f = e.dataTransfer.files[0];
     if (f) await handleFileSelect(f);
   }
-
-  const effectiveHasSel = imageSource === "local" ? !!localFile : hasSel;
-  const primaryDisabled = isBusy || !status || (imageSource === "canvas" && (multiSel || !hasSel));
 
   function handleFeatureClick(f: FeatureDef) {
     // When proLocked, AI features show Coming Soon — block interaction silently
@@ -128,11 +114,6 @@ export function FeaturesScreen({ onRunFeature, onManagePlan, onTopUp, watching, 
     }
     const bytes = imageSource === "local" && localFile ? localFile.bytes : undefined;
     onRunFeature(f, bytes);
-  }
-
-  function handlePrimaryRun() {
-    const bytes = imageSource === "local" && localFile ? localFile.bytes : undefined;
-    onRunFeature(PRIMARY_FEATURE, bytes);
   }
 
   return (
@@ -260,6 +241,7 @@ export function FeaturesScreen({ onRunFeature, onManagePlan, onTopUp, watching, 
         </div>
         <div className="feature-grid">
           {[PRIMARY_FEATURE, ...STARTER_FEATURES, ...PRO_FEATURES].map(f => {
+            const isBatch = f.id === "batch_process";
             const isAI = AI_FEATURE_IDS.has(f.id);
             const isComingSoon = proLocked && isAI;
             const isTargetFeature = TARGET_PRO_FEATURE_IDS.has(f.id);
@@ -275,6 +257,10 @@ export function FeaturesScreen({ onRunFeature, onManagePlan, onTopUp, watching, 
                 key={f.id}
                 className={`feature-card ${isActive && !isGetPro ? "active-card" : ""} ${isGetPro ? "get-pro-card" : ""}`}
                 onClick={() => {
+                  if (isBatch) {
+                    dispatch(setSection("batch"));
+                    return;
+                  }
                   if (isGetPro) {
                     onManagePlan();
                     return;
@@ -286,9 +272,11 @@ export function FeaturesScreen({ onRunFeature, onManagePlan, onTopUp, watching, 
                   <div className="feature-card-icon" style={isGetPro ? { background: "rgba(108,71,255,.15)", color: "var(--brand)" } : undefined}>
                     <FeatureIcon name={f.icon} size={15} />
                   </div>
-                  <span className={`feature-card-badge ${isGetPro ? "badge-get-pro" : badgeText.includes("CR") ? "badge-cr" : ""}`}>
-                    {badgeText}
-                  </span>
+                  {!isBatch && (
+                    <span className={`feature-card-badge ${isGetPro ? "badge-get-pro" : badgeText.includes("CR") ? "badge-cr" : ""}`}>
+                      {badgeText}
+                    </span>
+                  )}
                 </div>
                 <div className="feature-card-name">{f.label}</div>
                 {isGetPro && (

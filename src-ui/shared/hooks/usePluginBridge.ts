@@ -15,7 +15,7 @@ export function usePluginBridge() {
   const prevUrlRef = useRef<string | null>(null);
 
   const pendingExport = useRef<{ resolve: (b: Uint8Array) => void; reject: (e: Error) => void } | null>(null);
-  const pendingList = useRef<{ resolve: (nodes: SelectionNodeRef[]) => void } | null>(null);
+  const pendingList = useRef<{ resolve: (nodes: SelectionNodeRef[]) => void; reject: (e: Error) => void } | null>(null);
   const pendingNodes = useRef<Map<string, { resolve: (b: Uint8Array) => void; reject: (e: Error) => void }>>(new Map());
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export function usePluginBridge() {
           // Revoke old blob URL to prevent memory leaks
           if (prevUrlRef.current) { URL.revokeObjectURL(prevUrlRef.current); prevUrlRef.current = null; }
           if (msg.payload) {
-            const blob = new Blob([msg.payload as Uint8Array], { type: "image/png" });
+            const blob = new Blob([msg.payload as unknown as BlobPart], { type: "image/png" });
             const url = URL.createObjectURL(blob);
             prevUrlRef.current = url;
             dispatch(setPreviewUrl(url));
@@ -118,7 +118,7 @@ export function usePluginBridge() {
       }, 8000);
       pendingList.current = {
         resolve: (nodes) => { clearTimeout(timeoutId); resolve(nodes); },
-        reject: (err) => { clearTimeout(timeoutId); reject(err); },
+        reject: (err: Error) => { clearTimeout(timeoutId); reject(err); },
       };
       send({ type: "list-selection" });
     }), []);

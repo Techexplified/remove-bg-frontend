@@ -7,6 +7,7 @@ export type FeatureId =
   | "ai_background"
   | "ai_shadows"
   | "ai_relighting"
+  | "batch_process"
   | "hd_export"
   | "ai_upscale"
   | "ai_image_gen"
@@ -43,7 +44,7 @@ export interface ProcessingState {
   extraBullets?: string[];
 }
 
-export type SectionId = "features" | "toolbox" | "account" | "help" | "legal" | "settings";
+export type SectionId = "features" | "toolbox" | "account" | "help" | "legal" | "settings" | "batch";
 
 export type ModalKind = "none" | "topup" | "plan_picker" | "prompt" | "options" | "coming_soon" | "feature_preview";
 

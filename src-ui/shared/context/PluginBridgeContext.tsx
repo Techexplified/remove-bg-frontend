@@ -41,6 +41,8 @@ export interface PluginBridge {
     imageFilterPreset?: string,
     customBgBytes?: Uint8Array
   ) => void;
+  exportSelectionBatch: () => Promise<Array<{ id: string; name: string; bytes: Uint8Array; width: number; height: number }>>;
+  insertBatchResultImages: (items: Array<{ name: string; bytes: Uint8Array }>) => void;
 }
 
 const PluginBridgeContext = createContext<PluginBridge | null>(null);
@@ -51,6 +53,7 @@ export function PluginBridgeProvider({ children }: { children: ReactNode }) {
   const pendingExport = useRef<{ resolve: (b: Uint8Array) => void; reject: (e: Error) => void } | null>(null);
   const pendingList = useRef<{ resolve: (nodes: SelectionNodeRef[]) => void; reject: (e: Error) => void } | null>(null);
   const pendingNodes = useRef<Map<string, { resolve: (b: Uint8Array) => void; reject: (e: Error) => void }>>(new Map());
+  const pendingBatchExport = useRef<{ resolve: (items: Array<{ id: string; name: string; bytes: Uint8Array; width: number; height: number }>) => void; reject: (e: Error) => void } | null>(null);
 
   useEffect(() => {
     const handler = (event: MessageEvent) => {
@@ -93,7 +96,7 @@ export function PluginBridgeProvider({ children }: { children: ReactNode }) {
           // Revoke old blob URL to prevent memory leaks
           if (prevUrlRef.current) { URL.revokeObjectURL(prevUrlRef.current); prevUrlRef.current = null; }
           if (msg.payload) {
-            const blob = new Blob([msg.payload as unknown as Uint8Array], { type: "image/png" });
+            const blob = new Blob([msg.payload as unknown as BlobPart], { type: "image/png" });
             const url = URL.createObjectURL(blob);
             prevUrlRef.current = url;
             dispatch(setPreviewUrl(url));
@@ -120,6 +123,11 @@ export function PluginBridgeProvider({ children }: { children: ReactNode }) {
         case "list-selection-result":
           pendingList.current?.resolve(msg.payload);
           pendingList.current = null;
+          break;
+
+        case "export-selection-batch-result":
+          pendingBatchExport.current?.resolve(msg.payload);
+          pendingBatchExport.current = null;
           break;
 
         case "export-node-result": {
@@ -197,9 +205,30 @@ export function PluginBridgeProvider({ children }: { children: ReactNode }) {
     customBgBytes?: Uint8Array
   ) => send({ type: "apply-image-adjustments", brightness, contrast, saturation, opacity, backgroundPreset, imageFilterPreset, customBgBytes }), []);
 
+  const exportSelectionBatch = useCallback((): Promise<Array<{ id: string; name: string; bytes: Uint8Array; width: number; height: number }>> => {
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        if (pendingBatchExport.current) {
+          pendingBatchExport.current = null;
+          reject(new Error("Batch selection export timed out."));
+        }
+      }, 15000);
+      pendingBatchExport.current = {
+        resolve: (items) => { clearTimeout(timeoutId); resolve(items); },
+        reject: (err) => { clearTimeout(timeoutId); reject(err); },
+      };
+      send({ type: "export-selection-batch" });
+    });
+  }, []);
+
+  const insertBatchResultImages = useCallback((items: Array<{ name: string; bytes: Uint8Array }>) => {
+    send({ type: "insert-batch-result-images", items });
+  }, []);
+
   const bridge: PluginBridge = {
     exportSelectedImage, insertResultImage, requestPreview, requestUserIdRetry,
     openExternal, notify, listSelection, exportNode, resizeSelection, applyAdjustments,
+    exportSelectionBatch, insertBatchResultImages,
   };
 
   return (

@@ -357,6 +357,81 @@ figma.ui.onmessage = async (msg: { type: string;[k: string]: unknown }) => {
       break;
     }
 
+    case "export-selection-batch": {
+      const sel = figma.currentPage.selection.filter(isExportable);
+      if (sel.length === 0) {
+        figma.ui.postMessage({ type: "export-selection-batch-result", payload: [] });
+        break;
+      }
+      try {
+        const results = await Promise.all(
+          sel.map(async node => {
+            const bytes = await (node as SceneNode & ExportMixin).exportAsync({ format: "PNG" });
+            return {
+              id: node.id,
+              name: node.name,
+              bytes,
+              width: Math.round(node.width),
+              height: Math.round(node.height),
+            };
+          })
+        );
+        figma.ui.postMessage({ type: "export-selection-batch-result", payload: results });
+      } catch (e) {
+        figma.notify("Failed to export canvas selection.");
+        figma.ui.postMessage({ type: "export-selection-batch-result", payload: [] });
+      }
+      break;
+    }
+
+    case "insert-batch-result-images": {
+      const { items } = msg as unknown as { items: Array<{ name: string; bytes: Uint8Array }> };
+      if (!items || items.length === 0) break;
+      try {
+        const createdNodes: SceneNode[] = [];
+        const startX = figma.viewport.center.x;
+        const startY = figma.viewport.center.y;
+        const cols = Math.min(4, Math.ceil(Math.sqrt(items.length)));
+        const GAP = 32;
+
+        let curX = startX;
+        let curY = startY;
+        let rowMaxH = 0;
+
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          const img = figma.createImage(item.bytes);
+          const { width, height } = await img.getSizeAsync();
+          const rect = figma.createRectangle();
+          rect.resize(width, height);
+          rect.fills = [{ type: "IMAGE", imageHash: img.hash, scaleMode: "FILL" }];
+          rect.setPluginData("removebg_fg_hash", img.hash);
+          rect.name = item.name || `Batch Result ${i + 1}`;
+
+          rect.x = curX;
+          rect.y = curY;
+          figma.currentPage.appendChild(rect);
+          createdNodes.push(rect);
+
+          rowMaxH = Math.max(rowMaxH, height);
+          if ((i + 1) % cols === 0) {
+            curX = startX;
+            curY += rowMaxH + GAP;
+            rowMaxH = 0;
+          } else {
+            curX += width + GAP;
+          }
+        }
+
+        figma.currentPage.selection = createdNodes;
+        figma.viewport.scrollAndZoomIntoView(createdNodes);
+        figma.notify(`Placed ${createdNodes.length} batch images on canvas.`);
+      } catch (e) {
+        figma.notify(e instanceof Error ? e.message : "Couldn't place batch results.");
+      }
+      break;
+    }
+
     case "persist-plan-status": {
       cachedPlanStatus = msg.payload;
       try {

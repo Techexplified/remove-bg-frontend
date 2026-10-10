@@ -1,7 +1,7 @@
 export async function removeBackgroundLocal(imageBytes: Uint8Array): Promise<Uint8Array> {
   return new Promise((resolve, reject) => {
     try {
-      const blob = new Blob([imageBytes], { type: "image/png" });
+      const blob = new Blob([imageBytes as unknown as BlobPart], { type: "image/png" });
       const url = URL.createObjectURL(blob);
       const img = new Image();
 

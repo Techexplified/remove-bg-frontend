@@ -3,9 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Provider } from "react-redux";
 import { store } from "./app/store";
 import { useAppDispatch, useAppSelector } from "./app/hooks";
-import { setProcessing, addToast, removeToast, openModal, setLastRun, setCheckoutOverlay, incrementUseCount } from "./app/slices/uiSlice";
+import { setProcessing, addToast, openModal, setLastRun, setCheckoutOverlay, incrementUseCount } from "./app/slices/uiSlice";
 import { CheckoutOverlay } from "./shared/components/CheckoutOverlay";
-import { Sidebar } from "./shared/components/Sidebar";
 import { ProcessingOverlay } from "./shared/components/ProcessingOverlay";
 import { ToastStack } from "./shared/components/toasts/ToastStack";
 import { TopUpModal } from "./shared/components/modals/TopUpModal";
@@ -17,6 +16,7 @@ import { FeaturePreviewModal } from "./shared/components/modals/FeaturePreviewMo
 import { FeaturesScreen } from "./features/features-screen/FeaturesScreen";
 import { ToolboxScreen } from "./features/toolbox/ToolboxScreen";
 import { SettingsScreen } from "./features/settings/SettingsScreen";
+import { BatchProcessScreen } from "./features/batch/BatchProcessScreen";
 import { ExitIntentQuestion } from "./shared/components/feedback/ExitIntentQuestion";
 import { ReviewPrompt } from "./shared/components/feedback/ReviewPrompt";
 import { PluginBridgeProvider, usePluginBridgeContext } from "./shared/context/PluginBridgeContext";
@@ -75,7 +75,6 @@ function AppReady() {
   // AppReady is only mounted once hasReceivedUserId=true, so window.__figmaUserId
   // is already set by the time any of this fires.
   const status = useAppSelector(s => s.status.data);
-  const refetch = useCallback(() => dispatch(loadPlanStatus()), [dispatch]);
   const checkoutWatcher = useCheckoutWatcher();
   const checkoutOverlay = useAppSelector(s => s.ui.checkoutOverlay);
 
@@ -121,7 +120,7 @@ function AppReady() {
         }
         if (imageBytes) {
           lastInputBytesRef.current = imageBytes;
-          const blob = new Blob([imageBytes], { type: "image/png" });
+          const blob = new Blob([imageBytes as unknown as BlobPart], { type: "image/png" });
           dispatch(setOriginalUrl(URL.createObjectURL(blob)));
         }
       }
@@ -371,6 +370,7 @@ function AppReady() {
             />
           )}
           {activeSection === "settings" && <SettingsScreen />}
+          {activeSection === "batch" && <BatchProcessScreen />}
         </motion.div>
       </AnimatePresence>
 
@@ -400,7 +400,6 @@ function AppReady() {
 function AppShell() {
   const dispatch = useAppDispatch();
   const hasReceivedUserId = useAppSelector(s => s.figma.hasReceivedUserId);
-  const userId = useAppSelector(s => s.figma.userId);
   // BUG-07 fix: use the shared context bridge instead of creating a new hook instance.
   // Previously AppShell and AppReady each called usePluginBridge(), registering
   // a second window.message listener while AppReady was mounted.
@@ -412,9 +411,6 @@ function AppShell() {
   useEffect(() => {
     resetSession();
   }, []);
-
-  const status = useAppSelector(s => s.status.data);
-  const statusError = useAppSelector(s => s.status.error);
 
   // Faster retry getting user ID at 250ms if handshake didn't arrive immediately
   useEffect(() => {

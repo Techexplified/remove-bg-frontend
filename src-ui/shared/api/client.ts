@@ -163,6 +163,7 @@ const FEATURE_PATHS: Record<FeatureId, string> = {
   ai_background: "/api/features/ai-background",
   ai_shadows: "/api/features/ai-shadows",
   ai_relighting: "/api/features/ai-relighting",
+  batch_process: "/api/features/remove-bg-basic",
   hd_export: "/api/features/hd-export",
   ai_upscale: "/api/features/ai-upscale",
   ai_image_gen: "/api/features/ai-image-gen",
@@ -201,7 +202,7 @@ export async function runFeature(
     : await apiFetch(path, {
         method: "POST",
         headers: { "Content-Type": "application/octet-stream" },
-        body: new Blob([imageBytes ?? new Uint8Array()]),
+        body: new Blob([(imageBytes ?? new Uint8Array()) as unknown as BlobPart]),
       });
 
   if (!response.ok) {
@@ -259,7 +260,7 @@ export async function runAiTrial(imageBytes: Uint8Array): Promise<Uint8Array> {
   const response = await apiFetch("/api/features/ai-trial", {
     method: "POST",
     headers: { "Content-Type": "application/octet-stream" },
-    body: new Blob([imageBytes]),
+    body: new Blob([imageBytes as unknown as BlobPart]),
   });
   if (!response.ok) {
     const e = await parseError(response);

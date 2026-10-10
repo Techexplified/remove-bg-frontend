@@ -11,6 +11,7 @@ export type PluginToUIMessage =
   | { type: "cached-plan-status"; payload: unknown }
   | { type: "list-selection-result"; payload: SelectionNodeRef[] }
   | { type: "export-node-result"; payload: ExportNodeResult }
+  | { type: "export-selection-batch-result"; payload: Array<{ id: string; name: string; bytes: Uint8Array; width: number; height: number }> }
   | { type: "preview-update"; payload: Uint8Array | null };
 
 export type UIToPluginMessage =
@@ -19,6 +20,8 @@ export type UIToPluginMessage =
   | { type: "request-preview" }
   | { type: "export-selected-image" }
   | { type: "insert-result-image"; payload: Uint8Array }
+  | { type: "export-selection-batch" }
+  | { type: "insert-batch-result-images"; items: Array<{ name: string; bytes: Uint8Array }> }
   | { type: "list-selection" }
   | { type: "export-node-by-id"; requestId: string; nodeId: string }
   | { type: "resize-selection"; width: number; height: number }
