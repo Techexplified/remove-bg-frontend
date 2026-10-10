@@ -1,15 +1,22 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Image as ImageIcon, Check, RefreshCw, AlertCircle, Loader } from "lucide-react";
+import { Image as ImageIcon, AlertCircle, Loader, CheckCircle2, ZoomIn, ZoomOut, Download, Sparkles, Expand } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { setSection } from "../../app/slices/uiSlice";
 import type { SelectionNodeRef } from "../../shared/types/messages";
+import { ImageViewerModal } from "../../shared/components/modals/ImageViewerModal";
+import { ToolboxNavTabs, ToolboxTabId } from "./tabs/ToolboxNavTabs";
+import { BackgroundTab } from "./tabs/BackgroundTab";
+import { AdjustTab } from "./tabs/AdjustTab";
+import { SizeTab } from "./tabs/SizeTab";
+import { ImageInfoBar } from "./components/ImageInfoBar";
 
 interface Props {
   onApplyAdjustments: (
     b: number, c: number, s: number,
     opacity?: number,
     backgroundPreset?: string,
-    imageFilterPreset?: string
+    imageFilterPreset?: string,
+    customBgBytes?: Uint8Array
   ) => void;
   onResize?: (w: number, h: number) => void;
   listSelection?: () => Promise<SelectionNodeRef[]>;
@@ -23,8 +30,7 @@ type PresetId =
   | "shadow" | "wood" | "sky" | "lavender" | "mint" | string;
 
 type ImageFilterId =
-  | "normal" | "grayscale" | "sepia" | "vivid" | "cool"
-  | "warm" | "fade" | "matte" | "dramatic" | "retro";
+  | "normal" | "grayscale" | "sepia" | "vivid" | "cool" | "warm";
 
 // ── Image filter definitions ──────────────────────────────────────────────────
 interface ImageFilterDef {
@@ -35,20 +41,24 @@ interface ImageFilterDef {
 }
 
 const IMAGE_FILTERS: ImageFilterDef[] = [
-  { id: "normal",    label: "Normal",   css: "none" },
-  { id: "grayscale", label: "B&W",      css: "grayscale(100%)" },
-  { id: "sepia",     label: "Sepia",    css: "sepia(80%)" },
-  { id: "vivid",     label: "Vivid",    css: "saturate(180%) contrast(1.1)" },
-  { id: "cool",      label: "Cool",     css: "hue-rotate(200deg) saturate(120%)" },
-  { id: "warm",      label: "Warm",     css: "sepia(30%) saturate(130%)" },
-  { id: "fade",      label: "Fade",     css: "brightness(1.1) contrast(0.8) saturate(0.8)" },
-  { id: "matte",     label: "Matte",    css: "contrast(0.85) brightness(1.05) saturate(0.8)" },
-  { id: "dramatic",  label: "Dramatic", css: "contrast(1.4) saturate(1.2) brightness(0.9)" },
-  { id: "retro",     label: "Retro",    css: "sepia(40%) contrast(1.1) brightness(0.95) hue-rotate(350deg)" },
+  { id: "normal", label: "Normal", css: "none" },
+  { id: "grayscale", label: "B&W", css: "grayscale(100%)" },
+  { id: "sepia", label: "Sepia", css: "sepia(80%)" },
+  { id: "vivid", label: "Vivid", css: "saturate(180%) contrast(1.1)" },
+  { id: "cool", label: "Cool", css: "hue-rotate(200deg) saturate(120%)" },
+  { id: "warm", label: "Warm", css: "sepia(30%) saturate(130%)" },
 ];
 
 // ── Background CSS helper ─────────────────────────────────────────────────────
-function getPreviewBgStyle(preset: PresetId): React.CSSProperties {
+function getPreviewBgStyle(preset: PresetId, customBgUrl?: string | null): React.CSSProperties {
+  if (preset === "custom-image" && customBgUrl) {
+    return {
+      backgroundImage: `url(${customBgUrl})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+    };
+  }
   if (preset.startsWith("#")) return { background: preset };
   switch (preset) {
     case "transparent":
@@ -63,16 +73,16 @@ function getPreviewBgStyle(preset: PresetId): React.CSSProperties {
         backgroundPosition: "0 0, 0 4px, 4px -4px, -4px 0px",
         backgroundColor: "#ffffff",
       };
-    case "white":    return { background: "#ffffff" };
-    case "sand":     return { background: "#f5e6d3" };
+    case "white": return { background: "#ffffff" };
+    case "sand": return { background: "#f5e6d3" };
     case "gradient": return { background: "linear-gradient(180deg, #6c47ff, #ec4899)" };
-    case "steel":    return { background: "#9ca3af" };
-    case "shadow":   return { background: "#ffffff" };
-    case "wood":     return { background: "#8B5A2B" };
-    case "sky":      return { background: "#87CEEB" };
+    case "steel": return { background: "#9ca3af" };
+    case "shadow": return { background: "#ffffff" };
+    case "wood": return { background: "#8B5A2B" };
+    case "sky": return { background: "#87CEEB" };
     case "lavender": return { background: "#E6E6FA" };
-    case "mint":     return { background: "#bdfcc9" };
-    default:         return { background: "transparent" };
+    case "mint": return { background: "#bdfcc9" };
+    default: return { background: "transparent" };
   }
 }
 
@@ -150,7 +160,7 @@ function extractDominantColors(img: HTMLImageElement, count: number): string[] {
 // ── Component ─────────────────────────────────────────────────────────────────
 export function ToolboxScreen({
   onApplyAdjustments,
-  onResize: _onResize,
+  onResize,
   listSelection: _listSelection,
   exportNode: _exportNode,
   insertResultImage: _insertResultImage,
@@ -159,19 +169,23 @@ export function ToolboxScreen({
   const dispatch = useAppDispatch();
   const { selection, previewUrl, originalUrl } = useAppSelector(s => s.figma);
 
+  const [activeTab, setActiveTab] = useState<ToolboxTabId>("background");
   const [activePreview, setActivePreview] = useState<"result" | "original">("result");
-  const [activePreset, setActivePreset]   = useState<PresetId>("transparent");
-  const [zoom, setZoom]                   = useState(100);
+  const [activePreset, setActivePreset] = useState<PresetId>("transparent");
+  const [customBgUrl, setCustomBgUrl] = useState<string | null>(null);
+  const [customBgBytes, setCustomBgBytes] = useState<Uint8Array | null>(null);
+  const [zoom, setZoom] = useState(100);
+  const [isFullViewOpen, setIsFullViewOpen] = useState(false);
 
   // Pan offset — only active when zoom > 100
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<{ sx: number; sy: number; px: number; py: number } | null>(null);
 
-  const [opacity, setOpacity]       = useState(100);
+  const [opacity, setOpacity] = useState(100);
   const [brightness, setBrightness] = useState(60);
   const [saturation, setSaturation] = useState(80);
-  const [contrast, setContrast]     = useState(45);
+  const [contrast, setContrast] = useState(45);
 
   const [activeFilter, setActiveFilter] = useState<ImageFilterId>("normal");
 
@@ -185,15 +199,32 @@ export function ToolboxScreen({
 
   const imgRef = useRef<HTMLImageElement | null>(null);
 
-  const dims = selection.hasSelection
-    ? `${selection.width} × ${selection.height}`
-    : "–";
+  // Credits calculation
+  const planStatus = useAppSelector(s => s.status.data);
+  const PLAN_LIMITS: Record<string, number> = { free: 10, starter: 100, pro: 250 };
+  const plan = planStatus?.plan ?? "free";
+  const totalAllotted = PLAN_LIMITS[plan] ?? 10;
+  const spendable = !planStatus ? 0 : (planStatus.credits + (plan === "pro" ? planStatus.topupCreditsPro : planStatus.topupCreditsStarter));
+  const creditsRemaining = spendable;
+  const creditsUsed = Math.max(0, totalAllotted - spendable);
 
-  // Reset zoom, pan & session original when selection changes
+  // Reset editor settings, zoom, pan & session original when selection changes
   useEffect(() => {
     setZoom(100);
     setPan({ x: 0, y: 0 });
     sessionOriginalRef.current = null;
+    setActivePreset("transparent");
+    setActiveColor(null);
+    setActivePreview("result");
+    setOpacity(100);
+    setBrightness(60);
+    setSaturation(80);
+    setContrast(45);
+    setActiveFilter("normal");
+    setActiveTab("background");
+    if (customBgUrl) URL.revokeObjectURL(customBgUrl);
+    setCustomBgUrl(null);
+    setCustomBgBytes(null);
   }, [selection]);
 
   // Reset pan when zoom snaps back to 100
@@ -246,7 +277,10 @@ export function ToolboxScreen({
 
   function handleApply() {
     if (!canApply) { notify("Select a layer first."); return; }
-    onApplyAdjustments(brightness, contrast, saturation, opacity, activePreset, activeFilter);
+    onApplyAdjustments(
+      brightness, contrast, saturation, opacity, activePreset, activeFilter,
+      activePreset === "custom-image" && customBgBytes ? customBgBytes : undefined
+    );
     setIsApplying(true);
   }
 
@@ -277,7 +311,7 @@ export function ToolboxScreen({
   const effectiveOriginalUrl = originalUrl ?? sessionOriginalRef.current ?? previewUrl;
 
   const currentFilter = IMAGE_FILTERS.find(f => f.id === activeFilter)!;
-  const imgCssFilter  = currentFilter?.css ?? "none";
+  const imgCssFilter = currentFilter?.css ?? "none";
 
   // Clamp pan so the image never fully leaves the viewport (based on zoom level)
   // Max sensible offset in each axis = container size × (scale − 1) / 2
@@ -286,6 +320,59 @@ export function ToolboxScreen({
   const clampedPan = zoom > 100
     ? { x: Math.max(-MAX_PAN, Math.min(MAX_PAN, pan.x)), y: Math.max(-MAX_PAN, Math.min(MAX_PAN, pan.y)) }
     : { x: 0, y: 0 };
+
+  // Instant Download
+  const handleInstatDownlod = async () => {
+    if (!previewUrl) {
+      notify("No image available to download.");
+      return;
+    }
+    const rawName = selection.hasSelection ? selection.name : "removed_background";
+    const cleanName = rawName.replace(/[/\\?%*:|"<>]/g, "-").trim() || "removed_background";
+
+    let downloadHref = previewUrl;
+
+    if (activePreset === "custom-image" && customBgUrl) {
+      try {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        const bgImg = new Image();
+        const fgImg = new Image();
+        bgImg.crossOrigin = "anonymous";
+        fgImg.crossOrigin = "anonymous";
+        bgImg.src = customBgUrl;
+        fgImg.src = previewUrl;
+
+        await Promise.all([
+          new Promise((res, rej) => { bgImg.onload = res; bgImg.onerror = rej; }),
+          new Promise((res, rej) => { fgImg.onload = res; fgImg.onerror = rej; }),
+        ]);
+
+        canvas.width = fgImg.naturalWidth || 1024;
+        canvas.height = fgImg.naturalHeight || 1024;
+
+        if (ctx) {
+          ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+          if (imgCssFilter && imgCssFilter !== "none") {
+            ctx.filter = imgCssFilter;
+          }
+          ctx.drawImage(fgImg, 0, 0, canvas.width, canvas.height);
+          downloadHref = canvas.toDataURL("image/png");
+        }
+      } catch {
+        downloadHref = previewUrl;
+      }
+    }
+    
+    const link = document.createElement("a");
+    link.href = downloadHref;
+    link.download = `${cleanName}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    notify(`Saved as ${cleanName}.png`);
+  };
 
   return (
     <>
@@ -297,8 +384,8 @@ export function ToolboxScreen({
           ←
         </button>
         <div>
-          <h2 style={{ fontSize: "16px", fontWeight: "800", color: "var(--c-text)", margin: 0 }}>Design System</h2>
-          <p style={{ fontSize: "11px", color: "var(--c-text-3)", margin: 0 }}>Refine your result</p>
+          <h2 style={{ fontSize: "16px", fontWeight: "800", color: "var(--c-text)", margin: 0 }}>Remove Background</h2>
+          <p style={{ fontSize: "11px", color: "var(--c-text-3)", margin: 0 }}>Preview and Refine your result</p>
         </div>
       </div>
 
@@ -309,7 +396,7 @@ export function ToolboxScreen({
           {previewUrl ? (
             <>
               {/* Background layer */}
-              <div className="toolbox-preview-bg" style={getPreviewBgStyle(activePreset)} />
+              <div className="toolbox-preview-bg" style={getPreviewBgStyle(activePreset, customBgUrl)} />
 
               {/* Image layer — drag-to-pan when zoom > 100 */}
               <div
@@ -355,31 +442,59 @@ export function ToolboxScreen({
                 </div>
               )}
 
-              {/* Zoom — min 25%, max 300%; double-click hint */}
-              <div className="toolbox-preview-zoom">
-                <button onClick={() => setZoom(z => Math.max(25, z - 10))}>−</button>
-                <span
-                  title="Double-click preview to reset"
-                  style={{ cursor: "pointer" }}
-                  onClick={handlePreviewDoubleClick}
-                >🔍 {zoom}%</span>
-                <button onClick={() => setZoom(z => Math.min(300, z + 10))}>+</button>
+              {/* Status tag — top-left */}
+              <div className="toolbox-preview-status">
+                <CheckCircle2 size={13} className="toolbox-status-icon" />
+                <span>Background Removed</span>
               </div>
 
-              {/* Dims */}
-              <div className="toolbox-preview-dims">{dims}</div>
-
-              {/* Toggle */}
+              {/* Before / After toggle — top-right */}
               <div className="toolbox-preview-toggle">
                 <button
-                  className={`preview-toggle-btn ${activePreview === "original" ? "active-result" : ""}`}
+                  className={`preview-toggle-btn ${activePreview === "original" ? "active" : ""}`}
                   onClick={() => setActivePreview("original")}
-                >Original</button>
+                >
+                  Before
+                </button>
                 <button
-                  className={`preview-toggle-btn ${activePreview === "result" ? "active-result" : ""}`}
+                  className={`preview-toggle-btn ${activePreview === "result" ? "active" : ""}`}
                   onClick={() => setActivePreview("result")}
                 >
-                  <span className="preview-toggle-dot" /> Result
+                  After
+                </button>
+              </div>
+
+              {/* Zoom bar — bottom-center */}
+              <div className="toolbox-preview-zoom">
+                <button
+                  onClick={() => setZoom(z => Math.max(25, z - 10))}
+                  title="Zoom Out"
+                  aria-label="Zoom Out"
+                >
+                  <ZoomOut size={14} />
+                </button>
+                <span
+                  title="Click to reset zoom"
+                  style={{ cursor: "pointer", userSelect: "none" }}
+                  onClick={handlePreviewDoubleClick}
+                >
+                  {zoom}%
+                </span>
+                <button
+                  onClick={() => setZoom(z => Math.min(300, z + 10))}
+                  title="Zoom In"
+                  aria-label="Zoom In"
+                >
+                  <ZoomIn size={14} />
+                </button>
+                <div className="zoom-divider" />
+                <button
+                  type="button"
+                  onClick={() => setIsFullViewOpen(true)}
+                  title="Full View"
+                  aria-label="Full View"
+                >
+                  <Expand size={13} />
                 </button>
               </div>
             </>
@@ -394,94 +509,64 @@ export function ToolboxScreen({
           )}
         </div>
 
-        {/* ── Replace Background ────────────────────────────── */}
-        <div className="toolbox-section">
-          <div className="toolbox-section-title">Replace Background</div>
-          <div className="bg-presets">
-            {/* Transparent — checkerboard, no text */}
-            <div
-              className={`bg-preset bg-preset-transparent ${activePreset === "transparent" ? "active" : ""}`}
-              onClick={() => handlePresetClick("transparent")}
-              title="Transparent"
-            />
-            {/* All other presets — pure colour swatches, no text labels */}
-            {[
-              { id: "white",    bg: "#ffffff", border: "1px solid #e5e7eb" },
-              { id: "sand",     bg: "#f5e6d3" },
-              { id: "gradient", bg: "linear-gradient(180deg, #6c47ff, #ec4899)" },
-              { id: "steel",    bg: "#9ca3af" },
-              { id: "shadow",   bg: "#ffffff", border: "1px solid #e5e7eb", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.15)" },
-              { id: "wood",     bg: "#8B5A2B" },
-              { id: "sky",      bg: "#87CEEB" },
-              { id: "lavender", bg: "#E6E6FA", border: "1px solid #d6d6f5" },
-              { id: "mint",     bg: "#bdfcc9", border: "1px solid #a0e8b0" },
-            ].map(({ id, bg, border, boxShadow }) => (
-              <div
-                key={id}
-                className={`bg-preset ${activePreset === id ? "active" : ""}`}
-                style={{ background: bg, border: border ?? undefined, boxShadow: boxShadow ?? undefined }}
-                onClick={() => handlePresetClick(id)}
-                title={id.charAt(0).toUpperCase() + id.slice(1)}
-              />
-            ))}
-          </div>
-        </div>
+        {/* ── Navigation Tabs ──────────────────────────────── */}
+        <ToolboxNavTabs activeTab={activeTab} onChangeTab={setActiveTab} />
 
-        {/* ── Colors from Image ─────────────────────────────── */}
-        <div className="toolbox-section">
-          <div className="toolbox-section-title">
-            <span>Colors from Image</span>
-            <button
-              onClick={handleRefreshColors}
-              style={{ background: "none", border: "none", color: "var(--c-text-3)", cursor: "pointer", display: "flex", alignItems: "center" }}
-              title="Re-extract colors"
-            >
-              <RefreshCw size={12} />
-            </button>
-          </div>
-          <div className="image-colors">
-            {colors.map((hex, i) => (
-              <div
-                key={i}
-                className={`color-circle ${activeColor === hex ? "active" : ""}`}
-                style={{ background: hex }}
-                onClick={() => handleColorClick(hex)}
-                title={hex}
-              />
-            ))}
-          </div>
-        </div>
+        {/* ── Tab Panes ─────────────────────────────────────── */}
+        {activeTab === "background" && (
+          <BackgroundTab
+            activePreset={activePreset}
+            onSelectPreset={handlePresetClick}
+            activeColor={activeColor}
+            onSelectColor={handleColorClick}
+            colors={colors}
+            onRefreshColors={handleRefreshColors}
+            notify={notify}
+            customBgUrl={customBgUrl}
+            onCustomImageSelected={(url, bytes) => {
+              setCustomBgUrl(url);
+              setCustomBgBytes(bytes);
+              setActivePreset("custom-image");
+              setActiveColor(null);
+            }}
+          />
+        )}
 
-        {/* ── Adjustments ───────────────────────────────────── */}
-        <div className="toolbox-section">
-          <div className="toolbox-section-title">Adjustments</div>
-          <div className="slider-group">
-            <div className="slider-row">
-              <span className="slider-label">Opacity</span>
-              <input type="range" min="0" max="100" className="slider-input" value={opacity}
-                onChange={e => setOpacity(Number(e.target.value))} />
-              <div className="slider-val-box">{opacity}</div>
-            </div>
-            <div className="slider-row">
-              <span className="slider-label">Brightness</span>
-              <input type="range" min="0" max="100" className="slider-input" value={brightness}
-                onChange={e => setBrightness(Number(e.target.value))} />
-              <div className="slider-val-box">{brightness}</div>
-            </div>
-            <div className="slider-row">
-              <span className="slider-label">Saturation</span>
-              <input type="range" min="0" max="100" className="slider-input" value={saturation}
-                onChange={e => setSaturation(Number(e.target.value))} />
-              <div className="slider-val-box">{saturation}</div>
-            </div>
-            <div className="slider-row">
-              <span className="slider-label">Contrast</span>
-              <input type="range" min="0" max="100" className="slider-input" value={contrast}
-                onChange={e => setContrast(Number(e.target.value))} />
-              <div className="slider-val-box">{contrast}</div>
-            </div>
-          </div>
-        </div>
+        {activeTab === "adjust" && (
+          <AdjustTab
+            opacity={opacity}
+            setOpacity={setOpacity}
+            brightness={brightness}
+            setBrightness={setBrightness}
+            saturation={saturation}
+            setSaturation={setSaturation}
+            contrast={contrast}
+            setContrast={setContrast}
+            onReset={() => {
+              setOpacity(100);
+              setBrightness(60);
+              setSaturation(80);
+              setContrast(45);
+            }}
+          />
+        )}
+
+        {activeTab === "size" && (
+          <SizeTab
+            currentWidth={selection.hasSelection ? selection.width : 1024}
+            currentHeight={selection.hasSelection ? selection.height : 1024}
+            onResize={onResize}
+            notify={notify}
+          />
+        )}
+
+        {/* ── Image Info & Credits Bar ──────────────────────── */}
+        <ImageInfoBar
+          width={selection.hasSelection ? selection.width : 1024}
+          height={selection.hasSelection ? selection.height : 1024}
+          creditsRemaining={creditsRemaining}
+          creditsUsed={creditsUsed}
+        />
 
         {/* ── Image Filters ─────────────────────────────────── */}
         <div className="toolbox-section">
@@ -513,35 +598,49 @@ export function ToolboxScreen({
               <span>Select a layer to apply changes</span>
             </div>
           )}
-          <button
-            className="cta-btn"
-            onClick={handleApply}
-            disabled={!canApply || isApplying}
-            style={{
-              width: "100%",
-              height: "42px",
-              display: "flex",
-              gap: "6px",
-              alignItems: "center",
-              justifyContent: "center",
-              background: canApply ? "var(--brand)" : "var(--c-border)",
-              color: canApply ? "white" : "var(--c-text-3)",
-              borderRadius: "10px",
-              border: "none",
-              fontWeight: "600",
-              cursor: canApply ? "pointer" : "not-allowed",
-              opacity: isApplying ? 0.7 : 1,
-              transition: "all 0.15s",
-            }}
-          >
-            {isApplying
-              ? <><Loader size={14} style={{ animation: "toolbox-spin 0.7s linear infinite" }} /> Applying…</>
-              : <><Check size={14} /> Apply Changes</>
-            }
-          </button>
+          <div className="toolbox-footer-actions">
+            <button
+              type="button"
+              className="btn-download"
+              onClick={handleInstatDownlod}
+              disabled={!previewUrl}
+              title="Download transparent image"
+            >
+              <Download size={14} />
+              <span>Download</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn-apply-figma"
+              onClick={handleApply}
+              disabled={!canApply || isApplying}
+            >
+              {isApplying ? (
+                <>
+                  <Loader size={14} style={{ animation: "toolbox-spin 0.7s linear infinite" }} />
+                  <span>Applying…</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={14} />
+                  <span>Apply to Figma</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
       </div>
+
+      <ImageViewerModal
+        isOpen={isFullViewOpen}
+        onClose={() => setIsFullViewOpen(false)}
+        imageUrl={activePreview === "original" ? (effectiveOriginalUrl ?? previewUrl) : previewUrl}
+        bgStyle={getPreviewBgStyle(activePreset, customBgUrl)}
+        filterCss={activePreview === "result" ? imgCssFilter : "none"}
+        onDownload={handleInstatDownlod}
+      />
     </>
   );
 }

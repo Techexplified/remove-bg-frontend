@@ -38,7 +38,8 @@ export interface PluginBridge {
     saturation: number,
     opacity?: number,
     backgroundPreset?: string,
-    imageFilterPreset?: string
+    imageFilterPreset?: string,
+    customBgBytes?: Uint8Array
   ) => void;
 }
 
@@ -92,7 +93,7 @@ export function PluginBridgeProvider({ children }: { children: ReactNode }) {
           // Revoke old blob URL to prevent memory leaks
           if (prevUrlRef.current) { URL.revokeObjectURL(prevUrlRef.current); prevUrlRef.current = null; }
           if (msg.payload) {
-            const blob = new Blob([msg.payload as unknown as Uint8Array], { type: "image/jpeg" });
+            const blob = new Blob([msg.payload as unknown as Uint8Array], { type: "image/png" });
             const url = URL.createObjectURL(blob);
             prevUrlRef.current = url;
             dispatch(setPreviewUrl(url));
@@ -192,8 +193,9 @@ export function PluginBridgeProvider({ children }: { children: ReactNode }) {
 
   const applyAdjustments = useCallback((
     brightness: number, contrast: number, saturation: number,
-    opacity?: number, backgroundPreset?: string, imageFilterPreset?: string
-  ) => send({ type: "apply-image-adjustments", brightness, contrast, saturation, opacity, backgroundPreset, imageFilterPreset }), []);
+    opacity?: number, backgroundPreset?: string, imageFilterPreset?: string,
+    customBgBytes?: Uint8Array
+  ) => send({ type: "apply-image-adjustments", brightness, contrast, saturation, opacity, backgroundPreset, imageFilterPreset, customBgBytes }), []);
 
   const bridge: PluginBridge = {
     exportSelectedImage, insertResultImage, requestPreview, requestUserIdRetry,

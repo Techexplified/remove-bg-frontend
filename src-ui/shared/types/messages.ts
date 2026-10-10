@@ -22,7 +22,16 @@ export type UIToPluginMessage =
   | { type: "list-selection" }
   | { type: "export-node-by-id"; requestId: string; nodeId: string }
   | { type: "resize-selection"; width: number; height: number }
-  | { type: "apply-image-adjustments"; brightness: number; contrast: number; saturation: number }
+  | {
+      type: "apply-image-adjustments";
+      brightness: number;
+      contrast: number;
+      saturation: number;
+      opacity?: number;
+      backgroundPreset?: string;
+      imageFilterPreset?: string;
+      customBgBytes?: Uint8Array;
+    }
   | { type: "persist-plan-status"; payload: unknown }
   | { type: "open-external"; payload: string }
   | { type: "notify"; payload: string }

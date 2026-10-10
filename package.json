@@ -14,6 +14,7 @@
   "dependencies": {
     "@reduxjs/toolkit": "^2.3.0",
     "framer-motion": "^11.11.0",
+    "jszip": "^3.10.2",
     "lucide-react": "^0.460.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "@figma/plugin-typings": "^1.103.0",
+    "@types/jszip": "^3.4.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",

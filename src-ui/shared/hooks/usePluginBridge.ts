@@ -49,7 +49,7 @@ export function usePluginBridge() {
           // Revoke old blob URL to prevent memory leaks
           if (prevUrlRef.current) { URL.revokeObjectURL(prevUrlRef.current); prevUrlRef.current = null; }
           if (msg.payload) {
-            const blob = new Blob([msg.payload as Uint8Array], { type: "image/jpeg" });
+            const blob = new Blob([msg.payload as Uint8Array], { type: "image/png" });
             const url = URL.createObjectURL(blob);
             prevUrlRef.current = url;
             dispatch(setPreviewUrl(url));
@@ -132,8 +132,12 @@ export function usePluginBridge() {
   }, []);
 
   const resizeSelection = useCallback((width: number, height: number) => send({ type: "resize-selection", width, height }), []);
-  const applyAdjustments = useCallback((brightness: number, contrast: number, saturation: number, opacity?: number, backgroundPreset?: string, imageFilterPreset?: string) =>
-    send({ type: "apply-image-adjustments", brightness, contrast, saturation, opacity, backgroundPreset, imageFilterPreset }), []);
+  const applyAdjustments = useCallback((
+    brightness: number, contrast: number, saturation: number,
+    opacity?: number, backgroundPreset?: string, imageFilterPreset?: string,
+    customBgBytes?: Uint8Array
+  ) =>
+    send({ type: "apply-image-adjustments", brightness, contrast, saturation, opacity, backgroundPreset, imageFilterPreset, customBgBytes }), []);
 
   return { exportSelectedImage, insertResultImage, requestPreview, requestUserIdRetry, openExternal, notify, listSelection, exportNode, resizeSelection, applyAdjustments };
 }

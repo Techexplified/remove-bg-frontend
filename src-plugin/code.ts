@@ -96,10 +96,31 @@ async function pushPreview() {
   const sel = figma.currentPage.selection.filter(isExportable);
   if (sel.length === 0) { figma.ui.postMessage({ type: "preview-update", payload: null }); return; }
   try {
+    const node = sel[0];
+    const savedFgHash = "getPluginData" in node ? node.getPluginData("removebg_fg_hash") : "";
+    if (savedFgHash) {
+      const img = figma.getImageByHash(savedFgHash);
+      if (img) {
+        const bytes = await img.getBytesAsync();
+        figma.ui.postMessage({ type: "preview-update", payload: bytes });
+        return;
+      }
+    }
+    if ("fills" in node && Array.isArray(node.fills)) {
+      const fgFill = [...node.fills].reverse().find(f => f.type === "IMAGE") as ImagePaint | undefined;
+      if (fgFill?.imageHash) {
+        const img = figma.getImageByHash(fgFill.imageHash);
+        if (img) {
+          const bytes = await img.getBytesAsync();
+          figma.ui.postMessage({ type: "preview-update", payload: bytes });
+          return;
+        }
+      }
+    }
     // Constrain preview to max 500px for snappy transfer and rendering
     const maxDim = Math.max(sel[0].width, sel[0].height);
     const scale = maxDim > 500 ? 500 / maxDim : 1;
-    const bytes = await sel[0].exportAsync({ format: "JPG", constraint: { type: "SCALE", value: scale } });
+    const bytes = await sel[0].exportAsync({ format: "PNG", constraint: { type: "SCALE", value: scale } });
     figma.ui.postMessage({ type: "preview-update", payload: bytes });
   } catch { figma.ui.postMessage({ type: "preview-update", payload: null }); }
 }
@@ -128,6 +149,7 @@ figma.ui.onmessage = async (msg: { type: string;[k: string]: unknown }) => {
         const rect = figma.createRectangle();
         rect.resize(width, height);
         rect.fills = [{ type: "IMAGE", imageHash: img.hash, scaleMode: "FILL" }];
+        rect.setPluginData("removebg_fg_hash", img.hash);
         rect.x = figma.viewport.center.x - width / 2;
         rect.y = figma.viewport.center.y - height / 2;
         rect.name = "RemoveBG result";
@@ -151,9 +173,10 @@ figma.ui.onmessage = async (msg: { type: string;[k: string]: unknown }) => {
     }
 
     case "apply-image-adjustments": {
-      const { brightness, contrast, saturation, opacity, backgroundPreset, imageFilterPreset } = msg as unknown as {
+      const { brightness, contrast, saturation, opacity, backgroundPreset, imageFilterPreset, customBgBytes } = msg as unknown as {
         brightness: number; contrast: number; saturation: number;
         opacity?: number; backgroundPreset?: string; imageFilterPreset?: string;
+        customBgBytes?: Uint8Array;
       };
       const sel = figma.currentPage.selection.filter((n): n is SceneNode & MinimalFillsMixin => "fills" in n);
       for (const node of sel) {
@@ -163,8 +186,25 @@ figma.ui.onmessage = async (msg: { type: string;[k: string]: unknown }) => {
 
         const fills = node.fills;
         if (fills === figma.mixed || !Array.isArray(fills)) continue;
-        const imgFill = fills.find(f => f.type === "IMAGE") as ImagePaint | undefined;
-        if (!imgFill) continue;
+
+        // Locate the foreground image fill (the cut-out subject)
+        // Figma paints fills bottom-to-top, so the foreground subject is always on top.
+        // We first check if the node has a stored 'removebg_fg_hash'.
+        const savedFgHash = "getPluginData" in node ? node.getPluginData("removebg_fg_hash") : "";
+        let fgFill: ImagePaint | undefined;
+        if (savedFgHash) {
+          fgFill = fills.find(f => f.type === "IMAGE" && (f as ImagePaint).imageHash === savedFgHash) as ImagePaint | undefined;
+        }
+        if (!fgFill) {
+          // Fallback: topmost IMAGE fill in the fills array
+          fgFill = [...fills].reverse().find(f => f.type === "IMAGE") as ImagePaint | undefined;
+        }
+        if (!fgFill) continue;
+
+        // Save foreground image hash so we consistently identify the cutout subject
+        if ("setPluginData" in node && fgFill.imageHash) {
+          node.setPluginData("removebg_fg_hash", fgFill.imageHash);
+        }
 
         // Base filters from sliders (0-100 → -1 to 1)
         const baseFilters = {
@@ -193,19 +233,50 @@ figma.ui.onmessage = async (msg: { type: string;[k: string]: unknown }) => {
           }
         }
 
-        const updatedImgFill = {
-          ...imgFill,
+        const updatedFgFill: ImagePaint = {
+          ...fgFill,
           filters: { ...baseFilters, ...filterOverrides },
         };
 
         if (backgroundPreset) {
+          // Clear any drop-shadow effect if switching away from the shadow preset
+          if (backgroundPreset !== "shadow" && "effects" in node && Array.isArray((node as any).effects)) {
+            (node as any).effects = [];
+          }
+
           if (backgroundPreset === "transparent") {
-            node.fills = [updatedImgFill];
+            if ("setPluginData" in node) node.setPluginData("removebg_bg_hash", "");
+            node.fills = [updatedFgFill];
+          } else if (backgroundPreset === "custom-image") {
+            if (customBgBytes) {
+              const bgImg = figma.createImage(customBgBytes);
+              if ("setPluginData" in node) node.setPluginData("removebg_bg_hash", bgImg.hash);
+              const bgFill: ImagePaint = { type: "IMAGE", imageHash: bgImg.hash, scaleMode: "FILL" };
+              node.fills = [bgFill, updatedFgFill];
+            } else {
+              // Preserve existing background image on the layer
+              const savedBgHash = "getPluginData" in node ? node.getPluginData("removebg_bg_hash") : "";
+              let existingBgFill: ImagePaint | undefined;
+              if (savedBgHash) {
+                existingBgFill = fills.find(f => f.type === "IMAGE" && (f as ImagePaint).imageHash === savedBgHash) as ImagePaint | undefined;
+              }
+              if (!existingBgFill) {
+                existingBgFill = fills.find(f => f.type === "IMAGE" && f !== fgFill) as ImagePaint | undefined;
+              }
+              if (existingBgFill) {
+                node.fills = [existingBgFill, updatedFgFill];
+              } else {
+                node.fills = [updatedFgFill];
+              }
+            }
           } else if (backgroundPreset === "white") {
-            node.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }, updatedImgFill];
+            if ("setPluginData" in node) node.setPluginData("removebg_bg_hash", "");
+            node.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }, updatedFgFill];
           } else if (backgroundPreset === "sand") {
-            node.fills = [{ type: "SOLID", color: { r: 245 / 255, g: 230 / 255, b: 211 / 255 } }, updatedImgFill];
+            if ("setPluginData" in node) node.setPluginData("removebg_bg_hash", "");
+            node.fills = [{ type: "SOLID", color: { r: 245 / 255, g: 230 / 255, b: 211 / 255 } }, updatedFgFill];
           } else if (backgroundPreset === "gradient") {
+            if ("setPluginData" in node) node.setPluginData("removebg_bg_hash", "");
             // gradientTransform for 180deg (top → bottom): [[1,0,0],[0,1,0]]
             // This matches the CSS linear-gradient(180deg, …) used in the preview.
             node.fills = [
@@ -217,13 +288,14 @@ figma.ui.onmessage = async (msg: { type: string;[k: string]: unknown }) => {
                   { position: 1, color: { r: 236 / 255, g: 72 / 255, b: 153 / 255, a: 1 } }
                 ]
               },
-              updatedImgFill
+              updatedFgFill
             ];
           } else if (backgroundPreset === "steel") {
-            // Match CSS #9ca3af (steel grey)
-            node.fills = [{ type: "SOLID", color: { r: 156 / 255, g: 163 / 255, b: 175 / 255 } }, updatedImgFill];
+            if ("setPluginData" in node) node.setPluginData("removebg_bg_hash", "");
+            node.fills = [{ type: "SOLID", color: { r: 156 / 255, g: 163 / 255, b: 175 / 255 } }, updatedFgFill];
           } else if (backgroundPreset === "shadow") {
-            node.fills = [updatedImgFill];
+            if ("setPluginData" in node) node.setPluginData("removebg_bg_hash", "");
+            node.fills = [updatedFgFill];
             if ("effects" in node) {
               (node as any).effects = [
                 {
@@ -237,22 +309,28 @@ figma.ui.onmessage = async (msg: { type: string;[k: string]: unknown }) => {
               ];
             }
           } else if (backgroundPreset === "wood") {
-            node.fills = [{ type: "SOLID", color: { r: 139 / 255, g: 90 / 255, b: 43 / 255 } }, updatedImgFill];
+            if ("setPluginData" in node) node.setPluginData("removebg_bg_hash", "");
+            node.fills = [{ type: "SOLID", color: { r: 139 / 255, g: 90 / 255, b: 43 / 255 } }, updatedFgFill];
           } else if (backgroundPreset === "sky") {
-            node.fills = [{ type: "SOLID", color: { r: 135 / 255, g: 206 / 255, b: 235 / 255 } }, updatedImgFill];
+            if ("setPluginData" in node) node.setPluginData("removebg_bg_hash", "");
+            node.fills = [{ type: "SOLID", color: { r: 135 / 255, g: 206 / 255, b: 235 / 255 } }, updatedFgFill];
           } else if (backgroundPreset === "lavender") {
-            node.fills = [{ type: "SOLID", color: { r: 230 / 255, g: 230 / 255, b: 250 / 255 } }, updatedImgFill];
+            if ("setPluginData" in node) node.setPluginData("removebg_bg_hash", "");
+            node.fills = [{ type: "SOLID", color: { r: 230 / 255, g: 230 / 255, b: 250 / 255 } }, updatedFgFill];
           } else if (backgroundPreset === "mint") {
-            // Match CSS #bdfcc9
-            node.fills = [{ type: "SOLID", color: { r: 189 / 255, g: 252 / 255, b: 201 / 255 } }, updatedImgFill];
+            if ("setPluginData" in node) node.setPluginData("removebg_bg_hash", "");
+            node.fills = [{ type: "SOLID", color: { r: 189 / 255, g: 252 / 255, b: 201 / 255 } }, updatedFgFill];
           } else if (backgroundPreset.startsWith("#")) {
+            if ("setPluginData" in node) node.setPluginData("removebg_bg_hash", "");
             const r = parseInt(backgroundPreset.substring(1, 3), 16) / 255;
             const g = parseInt(backgroundPreset.substring(3, 5), 16) / 255;
             const b = parseInt(backgroundPreset.substring(5, 7), 16) / 255;
-            node.fills = [{ type: "SOLID", color: { r, g, b } }, updatedImgFill];
+            node.fills = [{ type: "SOLID", color: { r, g, b } }, updatedFgFill];
           }
         } else {
-          node.fills = fills.map(f => f.type === "IMAGE" ? updatedImgFill : f);
+          // If no backgroundPreset was specified, keep all existing non-foreground fills intact
+          const bgFills = fills.filter(f => f !== fgFill);
+          node.fills = [...bgFills, updatedFgFill];
         }
       }
       figma.notify("Adjustments applied.");
