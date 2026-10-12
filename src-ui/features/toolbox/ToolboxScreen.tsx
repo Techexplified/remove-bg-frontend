@@ -167,7 +167,7 @@ export function ToolboxScreen({
   notify,
 }: Props) {
   const dispatch = useAppDispatch();
-  const { selection, previewUrl, originalUrl } = useAppSelector(s => s.figma);
+  const { selection, previewUrl, originalUrl, imageFormat } = useAppSelector(s => s.figma);
 
   const [activeTab, setActiveTab] = useState<ToolboxTabId>("background");
   const [activePreview, setActivePreview] = useState<"result" | "original">("result");
@@ -564,6 +564,7 @@ export function ToolboxScreen({
         <ImageInfoBar
           width={selection.hasSelection ? selection.width : 1024}
           height={selection.hasSelection ? selection.height : 1024}
+          format={imageFormat || "PNG"}
           creditsRemaining={creditsRemaining}
           creditsUsed={creditsUsed}
         />

@@ -143,6 +143,18 @@ figma.ui.onmessage = async (msg: { type: string;[k: string]: unknown }) => {
       const sel = figma.currentPage.selection.filter(isExportable);
       if (sel.length !== 1) { figma.ui.postMessage({ type: "export-error", payload: "Select a single layer first." }); break; }
       try {
+        const node = sel[0];
+        if ("fills" in node && Array.isArray(node.fills)) {
+          const fgFill = [...node.fills].reverse().find(f => f.type === "IMAGE") as ImagePaint | undefined;
+          if (fgFill?.imageHash) {
+            const img = figma.getImageByHash(fgFill.imageHash);
+            if (img) {
+              const bytes = await img.getBytesAsync();
+              figma.ui.postMessage({ type: "export-success", payload: bytes });
+              break;
+            }
+          }
+        }
         const bytes = await (sel[0] as SceneNode & ExportMixin).exportAsync({ format: "PNG" });
         figma.ui.postMessage({ type: "export-success", payload: bytes });
       } catch (e) { figma.ui.postMessage({ type: "export-error", payload: e instanceof Error ? e.message : "Export failed." }); }

@@ -3,6 +3,7 @@ import { Image as ImageIcon, FileText, Info } from "lucide-react";
 interface Props {
   width: number;
   height: number;
+  format?: string;
   creditsRemaining: number;
   creditsUsed: number;
 }
@@ -10,6 +11,7 @@ interface Props {
 export function ImageInfoBar({
   width,
   height,
+  format = "PNG",
   creditsRemaining,
   creditsUsed,
 }: Props) {
@@ -28,22 +30,7 @@ export function ImageInfoBar({
           </div>
           <div className="info-chip">
             <FileText size={12} className="info-chip-icon" />
-            <span>PNG</span>
-          </div>
-          <div className="info-chip">
-            <svg
-              width="14"
-              height="11"
-              viewBox="0 0 16 12"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="info-chip-icon"
-              style={{ flexShrink: 0 }}
-            >
-              <rect x="0.75" y="0.75" width="14.5" height="10.5" rx="2.5" stroke="currentColor" strokeWidth="1.25" />
-              <text x="3.2" y="8.8" fill="currentColor" fontSize="7" fontWeight="800" fontFamily="sans-serif">HD</text>
-            </svg>
-            <span>High Quality</span>
+            <span>{format}</span>
           </div>
         </div>
       </div>

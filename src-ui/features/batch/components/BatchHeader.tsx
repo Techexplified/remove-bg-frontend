@@ -1,11 +1,12 @@
-import { ArrowLeft, HelpCircle } from "lucide-react";
+import { ArrowLeft, HelpCircle, Zap } from "lucide-react";
 
 interface Props {
   onBack: () => void;
   onHowItWorks?: () => void;
+  creditsRemaining?: number;
 }
 
-export function BatchHeader({ onBack, onHowItWorks }: Props) {
+export function BatchHeader({ onBack, onHowItWorks, creditsRemaining }: Props) {
   return (
     <div className="batch-header">
       <div className="batch-header-left">
@@ -17,12 +18,20 @@ export function BatchHeader({ onBack, onHowItWorks }: Props) {
           <p className="batch-subtitle">Process multiple images at once</p>
         </div>
       </div>
-      {onHowItWorks && (
-        <button className="batch-how-btn" onClick={onHowItWorks}>
-          <HelpCircle size={12} />
-          <span>How it works</span>
-        </button>
-      )}
+      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        {typeof creditsRemaining === "number" && (
+          <div className="batch-credits-badge">
+            <Zap size={11} color="var(--brand)" />
+            <span><strong>{creditsRemaining}</strong> credits</span>
+          </div>
+        )}
+        {onHowItWorks && (
+          <button className="batch-how-btn" onClick={onHowItWorks}>
+            <HelpCircle size={12} />
+            <span>How it works</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -9,6 +9,7 @@ export interface ProcessBatchParams {
   setItems: Dispatch<SetStateAction<BatchItem[]>>;
   setProgressText: Dispatch<SetStateAction<string>>;
   notify: (msg: string) => void;
+  onCreditDeduct?: (item: BatchItem) => void;
   onItemSuccess?: (item: BatchItem) => void;
 }
 
@@ -66,6 +67,8 @@ export async function processBatchQueue(params: ProcessBatchParams): Promise<voi
         let cutoutBytes: Uint8Array;
         if (settings.removeBackground) {
           cutoutBytes = await runFeature("remove_bg_basic", item.originalBytes);
+          // Deduct credit immediately once background removal API call succeeds
+          params.onCreditDeduct?.(item);
         } else {
           cutoutBytes = item.originalBytes;
         }

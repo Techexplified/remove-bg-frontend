@@ -8,6 +8,7 @@ interface FigmaState {
   selection: SelectionInfo;
   previewUrl: string | null;
   originalUrl: string | null;
+  imageFormat: string;
 }
 
 const CACHED_USER_ID_KEY = "removebg_cached_user_id";
@@ -38,6 +39,7 @@ const initialState: FigmaState = {
   selection: { hasSelection: false },
   previewUrl: null,
   originalUrl: null,
+  imageFormat: "PNG",
 };
 
 const figmaSlice = createSlice({
@@ -73,8 +75,11 @@ const figmaSlice = createSlice({
       }
       s.originalUrl = a.payload;
     },
+    setImageFormat: (s, a: PayloadAction<string>) => {
+      s.imageFormat = a.payload;
+    },
   },
 });
 
-export const { setUserIdentity, setSelection, setPreviewUrl, setOriginalUrl } = figmaSlice.actions;
+export const { setUserIdentity, setSelection, setPreviewUrl, setOriginalUrl, setImageFormat } = figmaSlice.actions;
 export default figmaSlice.reducer;

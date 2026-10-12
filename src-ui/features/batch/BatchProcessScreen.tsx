@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { setSection } from "../../app/slices/uiSlice";
-import { deductCredits, loadPlanStatus } from "../../app/slices/statusSlice";
+import { deductCredits } from "../../app/slices/statusSlice";
 import { usePluginBridgeContext } from "../../shared/context/PluginBridgeContext";
 import { BatchHeader } from "./components/BatchHeader";
 import { BatchDropzone } from "./components/BatchDropzone";
@@ -133,7 +133,7 @@ export function BatchProcessScreen() {
         setItems,
         setProgressText,
         notify: bridge.notify,
-        onItemSuccess: () => {
+        onCreditDeduct: () => {
           if (settings.removeBackground) {
             dispatch(deductCredits(1));
           }
@@ -144,8 +144,6 @@ export function BatchProcessScreen() {
     } finally {
       setIsProcessing(false);
       setProgressText("");
-      // Sync fresh authoritative credits balance from server
-      dispatch(loadPlanStatus());
     }
   };
 
@@ -167,6 +165,7 @@ export function BatchProcessScreen() {
       <BatchHeader
         onBack={() => dispatch(setSection("features"))}
         onHowItWorks={() => bridge.notify("Upload up to 50 images, customize settings, and process in bulk.")}
+        creditsRemaining={spendableCredits}
       />
 
       <div className="batch-body">

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useAppDispatch } from "../../app/hooks";
-import { setUserIdentity, setSelection, setPreviewUrl } from "../../app/slices/figmaSlice";
+import { setUserIdentity, setSelection, setPreviewUrl, setImageFormat } from "../../app/slices/figmaSlice";
+import { detectImageFormat } from "../utils/imageFormat";
 import { setProcessing } from "../../app/slices/uiSlice";
 import type { PluginToUIMessage, UIToPluginMessage, SelectionNodeRef } from "../types/messages";
 
@@ -49,15 +50,25 @@ export function usePluginBridge() {
           // Revoke old blob URL to prevent memory leaks
           if (prevUrlRef.current) { URL.revokeObjectURL(prevUrlRef.current); prevUrlRef.current = null; }
           if (msg.payload) {
-            const blob = new Blob([msg.payload as unknown as BlobPart], { type: "image/png" });
+            const rawBytes = msg.payload as Uint8Array;
+            const format = detectImageFormat(rawBytes);
+            const mime = format === "JPG" ? "image/jpeg" : format === "WEBP" ? "image/webp" : format === "GIF" ? "image/gif" : "image/png";
+            const blob = new Blob([rawBytes as unknown as BlobPart], { type: mime });
             const url = URL.createObjectURL(blob);
             prevUrlRef.current = url;
             dispatch(setPreviewUrl(url));
-          } else { dispatch(setPreviewUrl(null)); }
+            dispatch(setImageFormat(format));
+          } else {
+            dispatch(setPreviewUrl(null));
+            dispatch(setImageFormat("PNG"));
+          }
           break;
         }
 
         case "export-success":
+          if (msg.payload) {
+            dispatch(setImageFormat(detectImageFormat(msg.payload as Uint8Array)));
+          }
           pendingExport.current?.resolve(msg.payload);
           pendingExport.current = null;
           break;
