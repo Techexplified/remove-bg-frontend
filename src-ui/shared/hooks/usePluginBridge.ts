@@ -68,9 +68,7 @@ export function usePluginBridge() {
           break;
 
         case "insert-success":
-          // Status refresh happens explicitly in App.tsx's executeFeature
-          // after runFeature() resolves — no cache invalidation needed here.
-          dispatch(setProcessing({ stage: "success" }));
+          // Image insertion completed. No generic modal needed (App.tsx manages its own flow).
           break;
 
         case "list-selection-result":

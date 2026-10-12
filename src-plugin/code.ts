@@ -62,7 +62,7 @@ void sendUserIdentity();
 
 type SelectionInfo =
   | { hasSelection: false }
-  | { hasSelection: true; name: string; width: number; height: number; count: number; pixelCount: number };
+  | { hasSelection: true; id?: string; name: string; width: number; height: number; count: number; pixelCount: number };
 
 function isExportable(node: SceneNode): node is SceneNode & ExportMixin & LayoutMixin {
   return "exportAsync" in node && "width" in node;
@@ -73,7 +73,15 @@ function getSelectionInfo(): SelectionInfo {
   if (sel.length === 0) return { hasSelection: false };
   const first = sel[0];
   const w = Math.round(first.width), h = Math.round(first.height);
-  return { hasSelection: true, name: sel.length === 1 ? first.name : `${sel.length} layers`, width: w, height: h, count: sel.length, pixelCount: w * h };
+  return {
+    hasSelection: true,
+    id: first.id,
+    name: sel.length === 1 ? first.name : `${sel.length} layers`,
+    width: w,
+    height: h,
+    count: sel.length,
+    pixelCount: w * h,
+  };
 }
 
 let previewDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -437,6 +445,14 @@ figma.ui.onmessage = async (msg: { type: string;[k: string]: unknown }) => {
       try {
         void figma.clientStorage.setAsync("removebg_plan_status", msg.payload);
       } catch {}
+      break;
+    }
+
+    case "resize-window": {
+      const { width, height } = msg as unknown as { width: number; height: number };
+      if (typeof width === "number" && typeof height === "number") {
+        figma.ui.resize(width, height);
+      }
       break;
     }
 

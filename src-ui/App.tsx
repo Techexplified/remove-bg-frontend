@@ -17,6 +17,7 @@ import { FeaturesScreen } from "./features/features-screen/FeaturesScreen";
 import { ToolboxScreen } from "./features/toolbox/ToolboxScreen";
 import { SettingsScreen } from "./features/settings/SettingsScreen";
 import { BatchProcessScreen } from "./features/batch/BatchProcessScreen";
+import { ResizeExportScreen } from "./features/resize-export/ResizeExportScreen";
 import { ExitIntentQuestion } from "./shared/components/feedback/ExitIntentQuestion";
 import { ReviewPrompt } from "./shared/components/feedback/ReviewPrompt";
 import { PluginBridgeProvider, usePluginBridgeContext } from "./shared/context/PluginBridgeContext";
@@ -371,6 +372,7 @@ function AppReady() {
           )}
           {activeSection === "settings" && <SettingsScreen />}
           {activeSection === "batch" && <BatchProcessScreen />}
+          {activeSection === "resize_export" && <ResizeExportScreen />}
         </motion.div>
       </AnimatePresence>
 

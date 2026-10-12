@@ -183,6 +183,7 @@ const FEATURE_PATHS: Record<FeatureId, string> = {
   ai_shadows: "/api/features/ai-shadows",
   ai_relighting: "/api/features/ai-relighting",
   batch_process: "/api/features/remove-bg-basic",
+  resize_export: "/api/features/crop-resize",
   hd_export: "/api/features/hd-export",
   ai_upscale: "/api/features/ai-upscale",
   ai_image_gen: "/api/features/ai-image-gen",

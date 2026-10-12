@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback } from "react";
-import { Sparkles, Crop, Palette, FileOutput, Layers, Sun, Lightbulb, ZoomIn, Wand2, PenTool, Upload, Settings, SlidersHorizontal, Copy } from "lucide-react";
+import { Sparkles, Crop, Palette, FileOutput, Layers, Sun, Lightbulb, ZoomIn, Wand2, PenTool, Upload, Settings, SlidersHorizontal, Copy, Scissors } from "lucide-react";
 import type { LucideProps } from "lucide-react";
 import type { FC } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
@@ -22,7 +22,7 @@ export interface Props {
 }
 
 const ICON_MAP: Record<string, FC<LucideProps>> = {
-  Sparkles, Crop, Palette, FileOutput, Layers, Sun, Lightbulb, ZoomIn, Wand2, PenTool, Copy,
+  Sparkles, Crop, Palette, FileOutput, Layers, Sun, Lightbulb, ZoomIn, Wand2, PenTool, Copy, Scissors,
 };
 
 function FeatureIcon({ name, size = 15 }: { name: string; size?: number }) {
@@ -259,6 +259,10 @@ export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
                 onClick={() => {
                   if (isBatch) {
                     dispatch(setSection("batch"));
+                    return;
+                  }
+                  if (f.id === "resize_export") {
+                    dispatch(setSection("resize_export"));
                     return;
                   }
                   if (isGetPro) {

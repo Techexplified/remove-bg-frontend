@@ -38,11 +38,12 @@ export type UIToPluginMessage =
   | { type: "persist-plan-status"; payload: unknown }
   | { type: "open-external"; payload: string }
   | { type: "notify"; payload: string }
+  | { type: "resize-window"; width: number; height: number }
   | { type: "close-plugin" };
 
 export type SelectionInfo =
   | { hasSelection: false }
-  | { hasSelection: true; name: string; width: number; height: number; count: number; pixelCount: number };
+  | { hasSelection: true; id?: string; name: string; width: number; height: number; count: number; pixelCount: number };
 
 export interface SelectionNodeRef { id: string; name: string; }
 

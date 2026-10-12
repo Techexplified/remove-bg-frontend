@@ -43,6 +43,8 @@ export interface PluginBridge {
   ) => void;
   exportSelectionBatch: () => Promise<Array<{ id: string; name: string; bytes: Uint8Array; width: number; height: number }>>;
   insertBatchResultImages: (items: Array<{ name: string; bytes: Uint8Array }>) => void;
+  resizeWindow: (width: number, height: number) => void;
+  requestSelection: () => void;
 }
 
 const PluginBridgeContext = createContext<PluginBridge | null>(null);
@@ -117,7 +119,7 @@ export function PluginBridgeProvider({ children }: { children: ReactNode }) {
           break;
 
         case "insert-success":
-          dispatch(setProcessing({ stage: "success" }));
+          // Image insertion completed. No generic modal needed (App.tsx manages its own flow).
           break;
 
         case "list-selection-result":
@@ -225,10 +227,18 @@ export function PluginBridgeProvider({ children }: { children: ReactNode }) {
     send({ type: "insert-batch-result-images", items });
   }, []);
 
+  const resizeWindow = useCallback((width: number, height: number) => {
+    send({ type: "resize-window", width, height });
+  }, []);
+
+  const requestSelection = useCallback(() => {
+    send({ type: "request-selection" });
+  }, []);
+
   const bridge: PluginBridge = {
     exportSelectedImage, insertResultImage, requestPreview, requestUserIdRetry,
     openExternal, notify, listSelection, exportNode, resizeSelection, applyAdjustments,
-    exportSelectionBatch, insertBatchResultImages,
+    exportSelectionBatch, insertBatchResultImages, resizeWindow, requestSelection,
   };
 
   return (

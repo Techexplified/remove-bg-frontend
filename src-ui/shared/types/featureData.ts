@@ -8,6 +8,7 @@ export const PRIMARY_FEATURE: FeatureDef = {
 export const STARTER_FEATURES: FeatureDef[] = [
   { id: "crop_resize", label: "Crop and Resize", description: "Resize to any dimension", icon: "Crop", credits: 1, needsInputImage: true, needsPrompt: false, minPlan: "free", needsOutputSize: true },
   { id: "color_background_fill", label: "Color Background", description: "Add a solid color backdrop", icon: "Palette", credits: 1, needsInputImage: true, needsPrompt: false, minPlan: "free", needsColor: true, badge: "Popular" },
+  { id: "resize_export", label: "Resize & Export", description: "Choose size, format, and export", icon: "Scissors", credits: 0, needsInputImage: false, needsPrompt: false, minPlan: "free", hasSubScreen: true },
 ];
 
 export const PRO_FEATURES: FeatureDef[] = [

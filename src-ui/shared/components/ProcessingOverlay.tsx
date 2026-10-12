@@ -9,9 +9,11 @@ import type { FeatureId } from "../types/api";
 export function ProcessingOverlay({ onRetry, originalBytes }: { onRetry: () => void; originalBytes?: Uint8Array | null }) {
   const dispatch = useAppDispatch();
   const processing = useAppSelector(s => s.ui.processing);
+  const activeSection = useAppSelector(s => s.ui.activeSection);
   const lastRunFeatureId = useAppSelector(s => s.ui.lastRunFeatureId);
   const { stage, progress, featureLabel, errorMessage, refunded, originalSize, targetSize, originalSub, targetSub, extraBullets } = processing;
 
+  if (activeSection === "resize_export" || activeSection === "batch") return null;
   if (stage === "idle") return null;
 
   const isLoading = stage === "exporting" || stage === "uploading" || stage === "processing";

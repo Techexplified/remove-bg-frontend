@@ -39,7 +39,7 @@ export type CheckoutResponse =
 export type FeatureId =
   | "remove_bg_basic" | "crop_resize" | "color_background_fill"
   | "ai_background" | "ai_shadows" | "ai_relighting"
-  | "batch_process" | "hd_export" | "ai_upscale" | "ai_image_gen" | "ai_logo_maker";
+  | "batch_process" | "resize_export" | "hd_export" | "ai_upscale" | "ai_image_gen" | "ai_logo_maker";
 
 export type PackId = "small" | "medium";
 
