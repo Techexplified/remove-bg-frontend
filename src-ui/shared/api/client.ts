@@ -41,17 +41,36 @@ async function apiFetch(path: string, options: RequestInit = {}, isRetry = false
   const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers, cache: "no-store" });
 
   // ── Section A3: Token Lifecycle 401 auto-retry ──
-  if (response.status === 401 && !isRetry && !path.includes("/api/subscription/status")) {
-    try {
-      await fetchPlanStatus();
+  if (response.status === 401 && !isRetry) {
+    if (!path.includes("/api/subscription/status")) {
+      try {
+        // Clear stale session token so fetchPlanStatus() requests a fresh one cleanly
+        resetSession();
+        await fetchPlanStatus();
+        const retryHeaders = new Headers(options.headers);
+        retryHeaders.set("x-figma-user-id", getFigmaUserId());
+        retryHeaders.set("x-figma-display-name", getFigmaDisplayName());
+        if (cachedSessionToken) retryHeaders.set("Authorization", `Bearer ${cachedSessionToken}`);
+        return fetch(`${API_BASE_URL}${path}`, { ...options, headers: retryHeaders, cache: "no-store" });
+      } catch {
+        return response;
+      }
+    } else if (cachedSessionToken) {
+      // /status itself failed with 401 while sending cachedSessionToken.
+      // Clear the token and retry once without Bearer (first-call semantics).
+      resetSession();
       const retryHeaders = new Headers(options.headers);
       retryHeaders.set("x-figma-user-id", getFigmaUserId());
       retryHeaders.set("x-figma-display-name", getFigmaDisplayName());
-      if (cachedSessionToken) retryHeaders.set("Authorization", `Bearer ${cachedSessionToken}`);
+      retryHeaders.delete("Authorization");
       return fetch(`${API_BASE_URL}${path}`, { ...options, headers: retryHeaders, cache: "no-store" });
-    } catch {
-      return response;
     }
+  }
+
+  // ── Transient Rate-Limit (429) or Server Cold-Start (503) auto-retry ──
+  if ((response.status === 429 || response.status === 503) && !isRetry) {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    return apiFetch(path, options, true);
   }
 
   return response;
