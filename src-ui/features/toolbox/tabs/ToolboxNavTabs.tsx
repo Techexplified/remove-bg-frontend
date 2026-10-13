@@ -1,4 +1,4 @@
-export type ToolboxTabId = "background" | "adjust" | "size";
+export type ToolboxTabId = "background" | "adjust" | "size" | "info";
 
 interface Props {
   activeTab: ToolboxTabId;
@@ -9,6 +9,7 @@ const TABS: { id: ToolboxTabId; label: string }[] = [
   { id: "background", label: "Background" },
   { id: "adjust", label: "Adjust" },
   { id: "size", label: "Size" },
+  { id: "info", label: "Info" },
 ];
 
 export function ToolboxNavTabs({ activeTab, onChangeTab }: Props) {

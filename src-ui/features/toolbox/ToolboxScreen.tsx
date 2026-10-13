@@ -8,7 +8,7 @@ import { ToolboxNavTabs, ToolboxTabId } from "./tabs/ToolboxNavTabs";
 import { BackgroundTab } from "./tabs/BackgroundTab";
 import { AdjustTab } from "./tabs/AdjustTab";
 import { SizeTab } from "./tabs/SizeTab";
-import { ImageInfoBar } from "./components/ImageInfoBar";
+import { InfoTab } from "./tabs/InfoTab";
 
 interface Props {
   onApplyAdjustments: (
@@ -157,6 +157,13 @@ function extractDominantColors(img: HTMLImageElement, count: number): string[] {
   }
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export function ToolboxScreen({
   onApplyAdjustments,
@@ -207,6 +214,46 @@ export function ToolboxScreen({
   const spendable = !planStatus ? 0 : (planStatus.credits + (plan === "pro" ? planStatus.topupCreditsPro : planStatus.topupCreditsStarter));
   const creditsRemaining = spendable;
   const creditsUsed = Math.max(0, totalAllotted - spendable);
+
+  // File size calculation
+  const [fileSizeStr, setFileSizeStr] = useState<string>("—");
+
+  useEffect(() => {
+    let isMounted = true;
+    const targetUrl = previewUrl || originalUrl;
+
+    if (!targetUrl) {
+      if (selection.hasSelection && selection.width && selection.height) {
+        const est = Math.round(selection.width * selection.height * 0.4);
+        setFileSizeStr(`~${formatBytes(est)}`);
+      } else {
+        setFileSizeStr("—");
+      }
+      return;
+    }
+
+    fetch(targetUrl)
+      .then(res => res.blob())
+      .then(blob => {
+        if (isMounted) {
+          setFileSizeStr(formatBytes(blob.size));
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          if (selection.hasSelection && selection.width && selection.height) {
+            const est = Math.round(selection.width * selection.height * 0.4);
+            setFileSizeStr(`~${formatBytes(est)}`);
+          } else {
+            setFileSizeStr("—");
+          }
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [previewUrl, originalUrl, selection]);
 
   // Reset editor settings, zoom, pan & session original when selection changes
   useEffect(() => {
@@ -560,36 +607,40 @@ export function ToolboxScreen({
           />
         )}
 
-        {/* ── Image Info & Credits Bar ──────────────────────── */}
-        <ImageInfoBar
-          width={selection.hasSelection ? selection.width : 1024}
-          height={selection.hasSelection ? selection.height : 1024}
-          format={imageFormat || "PNG"}
-          creditsRemaining={creditsRemaining}
-          creditsUsed={creditsUsed}
-        />
+        {activeTab === "info" && (
+          <InfoTab
+            width={selection.hasSelection ? selection.width : 1024}
+            height={selection.hasSelection ? selection.height : 1024}
+            fileSize={fileSizeStr}
+            format={imageFormat || "PNG"}
+            creditsRemaining={creditsRemaining}
+            creditsUsed={creditsUsed}
+          />
+        )}
 
         {/* ── Image Filters ─────────────────────────────────── */}
-        <div className="toolbox-section">
-          <div className="toolbox-section-title">Image Filters</div>
-          <div className="filter-row">
-            {IMAGE_FILTERS.map(f => (
-              <button
-                key={f.id}
-                className={`filter-chip ${activeFilter === f.id ? "active" : ""}`}
-                onClick={() => setActiveFilter(f.id)}
-                title={f.label}
-              >
-                {/* Mini colour preview strip to hint at the filter */}
-                <div
-                  className="filter-chip-swatch"
-                  style={{ filter: f.css === "none" ? undefined : f.css }}
-                />
-                <span className="filter-chip-label">{f.label}</span>
-              </button>
-            ))}
+        {activeTab !== "info" && (
+          <div className="toolbox-section">
+            <div className="toolbox-section-title">Image Filters</div>
+            <div className="filter-row">
+              {IMAGE_FILTERS.map(f => (
+                <button
+                  key={f.id}
+                  className={`filter-chip ${activeFilter === f.id ? "active" : ""}`}
+                  onClick={() => setActiveFilter(f.id)}
+                  title={f.label}
+                >
+                  {/* Mini colour preview strip to hint at the filter */}
+                  <div
+                    className="filter-chip-swatch"
+                    style={{ filter: f.css === "none" ? undefined : f.css }}
+                  />
+                  <span className="filter-chip-label">{f.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ── Apply button ──────────────────────────────────── */}
         <div className="toolbox-footer">
