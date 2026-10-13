@@ -72,7 +72,7 @@ export function AdvancedOptionsPanel({
             </div>
             {exportFormat === "png" && (
               <p className="re-lossless-hint">
-                PNG uses lossless compression. Quality levels apply when exporting as JPG or WebP.
+                PNG uses color quantization to reduce file size while preserving transparency.
               </p>
             )}
           </div>

@@ -232,6 +232,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+}
+
+.re-preset-brand-icon {
+  width: auto;
+  height: auto;
+  max-width: 17px;
+  max-height: 16px;
+  object-fit: contain;
+  display: block;
+  user-select: none;
+  pointer-events: none;
 }
 
 .re-preset-info {

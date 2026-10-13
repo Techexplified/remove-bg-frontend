@@ -152,13 +152,38 @@ export async function renderResizeExport(params: RenderResizeParams): Promise<Ui
   // 4. Apply Watermark if enabled
   drawWatermark(ctx, targetWidth, targetHeight, watermark);
 
-  // 5. Encode canvas to target format and compression level
+  // 5. Apply PNG color quantization if PNG compression is enabled
+  if (format === "png" && compression.enabled && compression.level < 0.98) {
+    const q = Math.min(1.0, Math.max(0.1, compression.level));
+    // Determine quantization step based on compression level:
+    // level 0.90 -> step ~2
+    // level 0.70 -> step ~5
+    // level 0.50 -> step ~8
+    // level 0.10 -> step ~14
+    const step = Math.max(1, Math.round(1 + (1 - q) * 14));
+    if (step > 1) {
+      const imgData = ctx.getImageData(0, 0, targetWidth, targetHeight);
+      const data = imgData.data;
+      const len = data.length;
+      for (let i = 0; i < len; i += 4) {
+        // Skip fully transparent pixels
+        if (data[i + 3] === 0) continue;
+        // Quantize RGB channels, preserving full alpha transparency
+        data[i] = Math.min(255, Math.round(data[i] / step) * step);
+        data[i + 1] = Math.min(255, Math.round(data[i + 1] / step) * step);
+        data[i + 2] = Math.min(255, Math.round(data[i + 2] / step) * step);
+      }
+      ctx.putImageData(imgData, 0, 0);
+    }
+  }
+
+  // 6. Encode canvas to target format and compression level
   const mimeType =
     format === "jpg" ? "image/jpeg" : format === "webp" ? "image/webp" : "image/png";
 
   const quality =
     format === "png"
-      ? undefined // PNG is lossless
+      ? undefined // PNG uses color quantization above; toBlob quality parameter is ignored by PNG spec
       : compression.enabled
       ? Math.min(1.0, Math.max(0.1, compression.level))
       : 0.92;

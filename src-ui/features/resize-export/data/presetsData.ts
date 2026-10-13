@@ -83,7 +83,7 @@ export const ECOMMERCE_PRESETS: SizePreset[] = [
     width: 2000,
     height: 2000,
     category: "ecommerce",
-    iconName: "ShoppingBag",
+    iconName: "Amazon",
   },
   {
     id: "shopify_prod",
@@ -92,16 +92,7 @@ export const ECOMMERCE_PRESETS: SizePreset[] = [
     width: 2048,
     height: 2048,
     category: "ecommerce",
-    iconName: "ShoppingBag",
-  },
-  {
-    id: "etsy_listing",
-    label: "Etsy Listing",
-    platform: "Etsy",
-    width: 2000,
-    height: 2000,
-    category: "ecommerce",
-    iconName: "Store",
+    iconName: "Shopify",
   },
   {
     id: "ebay_photo",
@@ -110,7 +101,7 @@ export const ECOMMERCE_PRESETS: SizePreset[] = [
     width: 1600,
     height: 1600,
     category: "ecommerce",
-    iconName: "Package",
+    iconName: "Ebay",
   },
   {
     id: "woo_catalog",
@@ -119,16 +110,7 @@ export const ECOMMERCE_PRESETS: SizePreset[] = [
     width: 1000,
     height: 1000,
     category: "ecommerce",
-    iconName: "ShoppingBag",
-  },
-  {
-    id: "store_banner",
-    label: "Storefront Banner",
-    platform: "E-Commerce",
-    width: 1920,
-    height: 800,
-    category: "ecommerce",
-    iconName: "Image",
+    iconName: "WooCommerce",
   },
 ];
 

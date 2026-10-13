@@ -26,13 +26,13 @@ import type {
   CustomDimensions,
   ResizeFitMode,
 } from "./types";
-import { UploadCloud } from "lucide-react";
+// import { UploadCloud } from "lucide-react";
 import "../../shared/styles/resize-export.css";
 
 export function ResizeExportScreen() {
   const dispatch = useAppDispatch();
   const bridge = usePluginBridgeContext();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Source Image State ──
   const [imageBytes, setImageBytes] = useState<Uint8Array | null>(null);
@@ -144,7 +144,8 @@ export function ResizeExportScreen() {
     };
   }, [selection, bridge, category, isProcessing]);
 
-  // Handle local file upload fallback
+  // Handle local file upload fallback (commented out per design request; uncomment if needed)
+  /*
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -174,6 +175,7 @@ export function ResizeExportScreen() {
       reader.readAsArrayBuffer(file);
     }
   };
+  */
 
   // ── Preset Selection ──
   const handleSelectPreset = (preset: SizePreset) => {
@@ -317,6 +319,8 @@ export function ResizeExportScreen() {
         }
       />
 
+      {/* Local file input fallback (commented out per design request; uncomment if needed) */}
+      {/*
       <input
         ref={fileInputRef}
         type="file"
@@ -324,9 +328,11 @@ export function ResizeExportScreen() {
         style={{ display: "none" }}
         onChange={handleFileChange}
       />
+      */}
 
       <div className="re-body">
-        {/* Quick upload prompt with smooth collapsible transition */}
+        {/* Quick upload prompt with smooth collapsible transition (commented out per design request; uncomment if needed) */}
+        {/*
         <div className={`re-banner-collapsible ${imageBytes ? "collapsed" : "expanded"}`}>
           <div
             className="batch-dropzone"
@@ -341,6 +347,7 @@ export function ResizeExportScreen() {
             </div>
           </div>
         </div>
+        */}
 
         <div className="re-layout-grid">
           {/* ── Left Column: Presets & Controls ── */}

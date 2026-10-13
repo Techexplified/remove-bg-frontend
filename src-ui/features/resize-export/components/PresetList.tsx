@@ -1,13 +1,5 @@
 import {
-  Instagram,
-  Youtube,
   Facebook,
-  Twitter,
-  Pin,
-  Linkedin,
-  ShoppingBag,
-  Store,
-  Package,
   Monitor,
   Tv,
   Palette,
@@ -17,6 +9,15 @@ import {
   Image,
 } from "lucide-react";
 import type { SizePreset } from "../types";
+import instagramLogo from "../assests/Instagram-logo.svg";
+import youtubeLogo from "../assests/Youtube-Logo.svg";
+import twitterXLogo from "../assests/twitter-X-logo.svg";
+import pinterestLogo from "../assests/Pinintrest-Logo.svg";
+import linkedinLogo from "../assests/Linkedin-logo.svg";
+import amazonLogo from "../assests/Amazon-Logo.svg";
+import shopifyLogo from "../assests/Shopify-Logo.svg";
+import ebayLogo from "../assests/Ebay-logo.svg";
+import wooLogo from "../assests/woocommerce-logo.svg";
 
 interface Props {
   presets: SizePreset[];
@@ -27,23 +28,25 @@ interface Props {
 function getPlatformIcon(iconName: string) {
   switch (iconName) {
     case "Instagram":
-      return <Instagram size={15} color="#E1306C" />;
+      return <img src={instagramLogo} alt="Instagram" className="re-preset-brand-icon" />;
     case "Youtube":
-      return <Youtube size={15} color="#FF0000" />;
+      return <img src={youtubeLogo} alt="YouTube" className="re-preset-brand-icon" />;
     case "Facebook":
       return <Facebook size={15} color="#1877F2" />;
     case "Twitter":
-      return <Twitter size={15} color="#1DA1F2" />;
+      return <img src={twitterXLogo} alt="X (Twitter)" className="re-preset-brand-icon" />;
     case "Pin":
-      return <Pin size={15} color="#E60023" />;
+      return <img src={pinterestLogo} alt="Pinterest" className="re-preset-brand-icon" />;
     case "Linkedin":
-      return <Linkedin size={15} color="#0A66C2" />;
-    case "ShoppingBag":
-      return <ShoppingBag size={15} color="#FF9900" />;
-    case "Store":
-      return <Store size={15} color="#6C47FF" />;
-    case "Package":
-      return <Package size={15} color="#0064D2" />;
+      return <img src={linkedinLogo} alt="LinkedIn" className="re-preset-brand-icon" />;
+    case "Amazon":
+      return <img src={amazonLogo} alt="Amazon" className="re-preset-brand-icon" />;
+    case "Shopify":
+      return <img src={shopifyLogo} alt="Shopify" className="re-preset-brand-icon" />;
+    case "Ebay":
+      return <img src={ebayLogo} alt="eBay" className="re-preset-brand-icon" />;
+    case "WooCommerce":
+      return <img src={wooLogo} alt="WooCommerce" className="re-preset-brand-icon" />;
     case "Monitor":
       return <Monitor size={15} color="#3B82F6" />;
     case "Tv":
