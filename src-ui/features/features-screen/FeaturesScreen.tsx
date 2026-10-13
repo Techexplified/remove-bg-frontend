@@ -4,14 +4,8 @@ import type { LucideProps } from "lucide-react";
 import type { FC } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { openModal, setAIFeature, setSection } from "../../app/slices/uiSlice";
-import { PRIMARY_FEATURE, STARTER_FEATURES, PRO_FEATURES, isFeatureUnlocked, PLAN_LIMITS } from "../../shared/types/featureData";
+import { IMAGE_STUDIO_FEATURES, PLAN_LIMITS } from "../../shared/types/featureData";
 import type { FeatureDef } from "../../shared/types/features";
-
-// Feature IDs that are AI/Pro-only and subject to the features lock
-const AI_FEATURE_IDS = new Set([
-  "ai_background", "ai_shadows", "ai_relighting",
-  "ai_upscale", "ai_image_gen", "ai_logo_maker",
-]);
 
 export interface Props {
   onRunFeature: (f: FeatureDef, localBytes?: Uint8Array) => void;
@@ -25,7 +19,7 @@ const ICON_MAP: Record<string, FC<LucideProps>> = {
   Sparkles, Crop, Palette, FileOutput, Layers, Sun, Lightbulb, ZoomIn, Wand2, PenTool, Copy, Scissors,
 };
 
-function FeatureIcon({ name, size = 15 }: { name: string; size?: number }) {
+function FeatureIcon({ name, size = 18 }: { name: string; size?: number }) {
   const Icon = ICON_MAP[name];
   return Icon ? <Icon size={size} /> : <Sparkles size={size} />;
 }
@@ -42,14 +36,13 @@ function readFileBytes(file: File): Promise<Uint8Array> {
 
 type ImageSource = "canvas" | "local";
 
-const TARGET_PRO_FEATURE_IDS = new Set(["remove_bg_basic", "color_background_fill", "crop_resize"]);
+const OUT_OF_CREDITS_TARGET_IDS = new Set(["remove_bg_basic", "batch_process"]);
 
 export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
   const dispatch = useAppDispatch();
   const status = useAppSelector(s => s.status.data);
   const selection = useAppSelector(s => s.figma.selection);
   const plan = status?.plan ?? "free";
-  const proLocked = status?.featuresLocked === true;
   const spendable = !status ? 0 : (status.credits + (plan === "pro" ? status.topupCreditsPro : status.topupCreditsStarter));
   const planLimit = PLAN_LIMITS[plan] ?? 10;
   const totalLimit = Math.max(planLimit, spendable);
@@ -86,30 +79,20 @@ export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
   }
 
   function handleFeatureClick(f: FeatureDef) {
-    // When proLocked, AI features show Coming Soon — block interaction silently
-    if (proLocked && AI_FEATURE_IDS.has(f.id)) {
-      dispatch(openModal({ kind: "coming_soon" }));
-      return;
-    }
-    // When 0 credits left out of 10, direct user to get Pro for all 3 starter/free features
-    if (isZeroCredits && TARGET_PRO_FEATURE_IDS.has(f.id)) {
+    if (isZeroCredits && OUT_OF_CREDITS_TARGET_IDS.has(f.id)) {
       onManagePlan();
       return;
     }
-    if (!isFeatureUnlocked(f, plan)) {
-      dispatch(openModal({ kind: "plan_picker" }));
+    if (f.id === "batch_process") {
+      dispatch(setSection("batch"));
       return;
     }
-    if (f.hasSubScreen) {
-      dispatch(setAIFeature(f.id));
+    if (f.id === "background_studio") {
+      dispatch(setSection("background_studio"));
       return;
     }
-    if (f.needsPrompt) {
-      dispatch(openModal({ kind: "prompt", featureId: f.id }));
-      return;
-    }
-    if (f.needsColor || f.needsOutputSize) {
-      dispatch(openModal({ kind: "options", featureId: f.id }));
+    if (f.id === "resize_export") {
+      dispatch(setSection("resize_export"));
       return;
     }
     const bytes = imageSource === "local" && localFile ? localFile.bytes : undefined;
@@ -235,62 +218,55 @@ export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
           {isZeroCredits ? "★ Get Pro — 0 Credits Left" : plan === "pro" ? "Manage Pro Plan" : "Upgrade to Pro"}
         </button>
 
-        {/* ── CREATIVE TOOLBOX Section ── */}
-        <div style={{ fontSize: "10.5px", fontWeight: "800", color: "var(--c-text-3)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: "10px" }}>
-          Creative Toolbox
+        {/* ── IMAGE STUDIO Section ── */}
+        <div style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: "12px" }}>
+          IMAGE STUDIO
         </div>
         <div className="feature-grid">
-          {[PRIMARY_FEATURE, ...STARTER_FEATURES, ...PRO_FEATURES].map(f => {
-            const isBatch = f.id === "batch_process";
-            const isAI = AI_FEATURE_IDS.has(f.id);
-            const isComingSoon = proLocked && isAI;
-            const isTargetFeature = TARGET_PRO_FEATURE_IDS.has(f.id);
-            const isGetPro = isZeroCredits && isTargetFeature;
-
-            // When user has 0 credits left out of 10, show GET PRO for all 3 starter/free features until converted into Pro.
-            const creditLabel = f.credits === 0 ? "FREE" : `${f.credits} CR`;
-            const badgeText = isGetPro ? "GET PRO" : isComingSoon ? "SOON" : creditLabel;
-            const isActive = f.id === "remove_bg_basic";
+          {IMAGE_STUDIO_FEATURES.map(f => {
+            const isOutOfCredits = isZeroCredits && OUT_OF_CREDITS_TARGET_IDS.has(f.id);
 
             return (
               <div
                 key={f.id}
-                className={`feature-card ${isActive && !isGetPro ? "active-card" : ""} ${isGetPro ? "get-pro-card" : ""}`}
+                className={`feature-card ${isOutOfCredits ? "get-pro-card" : ""}`}
                 onClick={() => {
-                  if (isBatch) {
-                    dispatch(setSection("batch"));
+                  if (isOutOfCredits) {
+                    onManagePlan();
                     return;
                   }
-                  if (f.id === "resize_export") {
-                    dispatch(setSection("resize_export"));
+                  if (f.id === "batch_process") {
+                    dispatch(setSection("batch"));
                     return;
                   }
                   if (f.id === "background_studio") {
                     dispatch(setSection("background_studio"));
                     return;
                   }
-                  if (isGetPro) {
-                    onManagePlan();
+                  if (f.id === "resize_export") {
+                    dispatch(setSection("resize_export"));
                     return;
                   }
-                  if (!isComingSoon) handleFeatureClick(f);
+                  handleFeatureClick(f);
                 }}
               >
                 <div className="feature-card-header">
-                  <div className="feature-card-icon" style={isGetPro ? { background: "rgba(108,71,255,.15)", color: "var(--brand)" } : undefined}>
-                    <FeatureIcon name={f.icon} size={15} />
+                  <div className="feature-card-icon">
+                    <FeatureIcon name={f.icon} size={18} />
                   </div>
-                  {!isBatch && (
-                    <span className={`feature-card-badge ${isGetPro ? "badge-get-pro" : badgeText.includes("CR") ? "badge-cr" : ""}`}>
-                      {badgeText}
+                  {isOutOfCredits && (
+                    <span className="feature-card-badge badge-get-pro">
+                      GET PRO
                     </span>
                   )}
                 </div>
                 <div className="feature-card-name">{f.label}</div>
-                {isGetPro && (
-                  <div style={{ fontSize: "9.5px", color: "var(--brand)", fontWeight: "700", marginTop: "1px" }}>
+                {isOutOfCredits ? (
+                  <div className="feature-card-unlock-text">
                     Get Pro to unlock →
                   </div>
+                ) : (
+                  <div className="feature-card-desc">{f.description}</div>
                 )}
               </div>
             );

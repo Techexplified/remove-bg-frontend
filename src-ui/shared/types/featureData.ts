@@ -24,6 +24,52 @@ export const PRO_FEATURES: FeatureDef[] = [
 
 export const ALL_FEATURES: FeatureDef[] = [PRIMARY_FEATURE, ...STARTER_FEATURES, ...PRO_FEATURES];
 
+export const IMAGE_STUDIO_FEATURES: FeatureDef[] = [
+  {
+    id: "remove_bg_basic",
+    label: "Remove Background",
+    description: "Cleanly remove backgrounds from images",
+    icon: "Sparkles",
+    credits: 1,
+    needsInputImage: true,
+    needsPrompt: false,
+    minPlan: "free",
+  },
+  {
+    id: "batch_process",
+    label: "Batch Process",
+    description: "Process multiple images at once",
+    icon: "Copy",
+    credits: 0,
+    needsInputImage: false,
+    needsPrompt: false,
+    minPlan: "free",
+    hasSubScreen: true,
+  },
+  {
+    id: "background_studio",
+    label: "Background Studio",
+    description: "Replace, color or gradient backgrounds",
+    icon: "Palette",
+    credits: 0,
+    needsInputImage: true,
+    needsPrompt: false,
+    minPlan: "free",
+    hasSubScreen: true,
+  },
+  {
+    id: "resize_export",
+    label: "Resize & Export",
+    description: "Social, ecommerce, presentation sizes",
+    icon: "Crop",
+    credits: 0,
+    needsInputImage: false,
+    needsPrompt: false,
+    minPlan: "free",
+    hasSubScreen: true,
+  },
+];
+
 export const PLAN_RANK: Record<string, number> = { free: 0, starter: 1, pro: 2 };
 export const PLAN_LIMITS: Record<string, number> = { free: 10, starter: 40, pro: 200 };
 
