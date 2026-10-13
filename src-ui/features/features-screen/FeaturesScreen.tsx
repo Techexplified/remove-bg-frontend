@@ -265,6 +265,10 @@ export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
                     dispatch(setSection("resize_export"));
                     return;
                   }
+                  if (f.id === "background_studio") {
+                    dispatch(setSection("background_studio"));
+                    return;
+                  }
                   if (isGetPro) {
                     onManagePlan();
                     return;

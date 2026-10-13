@@ -188,6 +188,7 @@ const FEATURE_PATHS: Record<FeatureId, string> = {
   ai_upscale: "/api/features/ai-upscale",
   ai_image_gen: "/api/features/ai-image-gen",
   ai_logo_maker: "/api/features/ai-logo-maker",
+  background_studio: "/api/features/color-background-fill",
 };
 
 const PROMPT_FEATURES: FeatureId[] = ["ai_image_gen", "ai_logo_maker"];

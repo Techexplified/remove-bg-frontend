@@ -12,7 +12,8 @@ export type FeatureId =
   | "hd_export"
   | "ai_upscale"
   | "ai_image_gen"
-  | "ai_logo_maker";
+  | "ai_logo_maker"
+  | "background_studio";
 
 export interface FeatureDef {
   id: FeatureId;
@@ -45,7 +46,7 @@ export interface ProcessingState {
   extraBullets?: string[];
 }
 
-export type SectionId = "features" | "toolbox" | "account" | "help" | "legal" | "settings" | "batch" | "resize_export";
+export type SectionId = "features" | "toolbox" | "account" | "help" | "legal" | "settings" | "batch" | "resize_export" | "background_studio";
 
 export type ModalKind = "none" | "topup" | "plan_picker" | "prompt" | "options" | "coming_soon" | "feature_preview";
 

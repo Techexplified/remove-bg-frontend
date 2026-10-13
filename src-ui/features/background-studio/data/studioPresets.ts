@@ -1,0 +1,68 @@
+import type { BackgroundPreset } from "../types";
+
+export const BACKGROUND_PRESETS: BackgroundPreset[] = [
+  {
+    id: "ecommerce",
+    name: "E-commerce",
+    type: "gradient",
+    colors: ["#F8FAFC", "#E9EEF5"],
+    angle: 180,
+    effect: "shadow",
+  },
+  {
+    id: "social-media",
+    name: "Social Media",
+    type: "gradient",
+    colors: ["#FBC2EB", "#A18CD1"],
+    angle: 135,
+    effect: "glow",
+  },
+  {
+    id: "website",
+    name: "Website",
+    type: "gradient",
+    colors: ["#E0F2FE", "#BAE6FD"],
+    angle: 135,
+    effect: "glow",
+  },
+  {
+    id: "presentation",
+    name: "Presentation",
+    type: "gradient",
+    colors: ["#FFF1C1", "#FDE7D3"],
+    angle: 135,
+    effect: "glow",
+  },
+  {
+    id: "gradient",
+    name: "Gradient",
+    type: "gradient",
+    colors: ["#7C3AED", "#EC4899"],
+    angle: 135,
+    effect: "glow",
+  },
+  {
+    id: "dark",
+    name: "Dark",
+    type: "gradient",
+    colors: ["#111827", "#374151"],
+    angle: 135,
+    effect: "vignette",
+  },
+  {
+    id: "nature",
+    name: "Nature",
+    type: "gradient",
+    colors: ["#D1FAE5", "#86EFAC"],
+    angle: 135,
+    effect: "glow",
+  },
+  {
+    id: "minimal",
+    name: "Minimal",
+    type: "gradient",
+    colors: ["#FFFFFF", "#F3F4F6"],
+    angle: 180,
+    effect: "none",
+  },
+];
