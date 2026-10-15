@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
-import { setSection } from "../../app/slices/uiSlice";
+import { setSection, openModal } from "../../app/slices/uiSlice";
 import { deductCredits } from "../../app/slices/statusSlice";
 import { usePluginBridgeContext } from "../../shared/context/PluginBridgeContext";
 import { BatchHeader } from "./components/BatchHeader";
@@ -118,12 +118,28 @@ export function BatchProcessScreen() {
   const creditCost = settings.removeBackground ? selectedItems.length : 0;
   const hasCompletedResults = items.some(i => i.status === "done" && i.resultBytes);
 
+  const creditStatus: "ok" | "zero_credits" | "insufficient_credits" =
+    settings.removeBackground && spendableCredits <= 0
+      ? "zero_credits"
+      : settings.removeBackground && selectedItems.length > 0 && spendableCredits < creditCost
+      ? "insufficient_credits"
+      : "ok";
+
+  const handleUpgradeClick = () => {
+    if (creditStatus === "zero_credits") {
+      bridge.notify("You're out of credits. Upgrade plan to continue.");
+    } else {
+      bridge.notify(`Insufficient credits (${spendableCredits} remaining, need ${creditCost}). Upgrade plan to continue.`);
+    }
+    dispatch(openModal({ kind: "plan_picker" }));
+  };
+
   const handleProcess = async () => {
-    if (selectedItems.length === 0) return;
-    if (settings.removeBackground && spendableCredits < creditCost) {
-      bridge.notify(`Not enough credits. You need ${creditCost} credits.`);
+    if (creditStatus !== "ok") {
+      handleUpgradeClick();
       return;
     }
+    if (selectedItems.length === 0) return;
 
     setIsProcessing(true);
     try {
@@ -193,8 +209,10 @@ export function BatchProcessScreen() {
         isProcessing={isProcessing}
         progressText={progressText}
         hasCompletedResults={hasCompletedResults}
+        creditStatus={creditStatus}
         onReset={handleReset}
         onProcess={handleProcess}
+        onUpgrade={handleUpgradeClick}
         onDownloadZip={handleDownloadZip}
         onPlaceOnCanvas={handlePlaceOnCanvas}
       />

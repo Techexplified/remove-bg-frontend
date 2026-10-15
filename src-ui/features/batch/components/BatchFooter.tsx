@@ -1,4 +1,4 @@
-import { RotateCcw, Layers, Loader2, Download } from "lucide-react";
+import { RotateCcw, Layers, Loader2, Download, Sparkles } from "lucide-react";
 
 interface Props {
   selectedCount: number;
@@ -6,8 +6,10 @@ interface Props {
   isProcessing: boolean;
   progressText?: string;
   hasCompletedResults: boolean;
+  creditStatus?: "ok" | "zero_credits" | "insufficient_credits";
   onReset: () => void;
   onProcess: () => void;
+  onUpgrade?: () => void;
   onDownloadZip: () => void;
   onPlaceOnCanvas: () => void;
 }
@@ -18,8 +20,10 @@ export function BatchFooter({
   isProcessing,
   progressText,
   hasCompletedResults,
+  creditStatus = "ok",
   onReset,
   onProcess,
+  onUpgrade,
   onDownloadZip,
   onPlaceOnCanvas,
 }: Props) {
@@ -45,6 +49,24 @@ export function BatchFooter({
             <span>Download All (.zip)</span>
           </button>
         </div>
+      ) : creditStatus === "zero_credits" ? (
+        <button
+          className="batch-process-btn"
+          style={{ background: "linear-gradient(135deg, #6c47ff, #8b5cf6)", color: "#ffffff", boxShadow: "0 2px 10px rgba(108, 71, 255, 0.3)" }}
+          onClick={onUpgrade || onProcess}
+        >
+          <Sparkles size={15} />
+          <span>Out of credits — Upgrade Plan</span>
+        </button>
+      ) : creditStatus === "insufficient_credits" ? (
+        <button
+          className="batch-process-btn"
+          style={{ background: "linear-gradient(135deg, #6c47ff, #8b5cf6)", color: "#ffffff", boxShadow: "0 2px 10px rgba(108, 71, 255, 0.3)" }}
+          onClick={onUpgrade || onProcess}
+        >
+          <Sparkles size={15} />
+          <span>Insufficient credits</span>
+        </button>
       ) : (
         <button
           className="batch-process-btn"

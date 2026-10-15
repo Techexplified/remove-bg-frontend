@@ -69,6 +69,8 @@ export function ResizeExportScreen() {
   });
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const status = useAppSelector((s) => s.status.data);
+  const isPaid = !!status && status.plan !== "free";
   const selection = useAppSelector((s) => s.figma.selection);
   const lastSelectionKeyRef = useRef<string>("");
   const blobUrlRef = useRef<string | null>(null);
@@ -219,6 +221,7 @@ export function ResizeExportScreen() {
 
   // ── Download Handler ──
   const handleDownload = async () => {
+    if (!isPaid) return;
     if (!imageBytes) {
       bridge.notify("Please select or upload an image first.");
       return;
@@ -263,6 +266,7 @@ export function ResizeExportScreen() {
 
   // ── Apply to Figma Handler ──
   const handleApplyToFigma = async () => {
+    if (!isPaid) return;
     if (exportFormat === "webp") {
       bridge.notify("Figma canvas does not support WebP. Please download or choose PNG/JPG.");
       return;
@@ -418,6 +422,7 @@ export function ResizeExportScreen() {
 
       <ResizeExportFooter
         isProcessing={isProcessing}
+        isLocked={!isPaid}
         isApplyDisabled={exportFormat === "webp"}
         applyDisabledReason="WebP is download-only (Figma canvas does not support WebP)"
         onReset={handleReset}

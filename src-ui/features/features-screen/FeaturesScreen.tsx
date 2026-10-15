@@ -3,7 +3,7 @@ import { Sparkles, Crop, Palette, FileOutput, Layers, Sun, Lightbulb, ZoomIn, Wa
 import type { LucideProps } from "lucide-react";
 import type { FC } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
-import { openModal, setAIFeature, setSection } from "../../app/slices/uiSlice";
+import { openModal, setAIFeature, setSection, addToast } from "../../app/slices/uiSlice";
 import { IMAGE_STUDIO_FEATURES, PLAN_LIMITS } from "../../shared/types/featureData";
 import type { FeatureDef } from "../../shared/types/features";
 
@@ -36,20 +36,21 @@ function readFileBytes(file: File): Promise<Uint8Array> {
 
 type ImageSource = "canvas" | "local";
 
-const OUT_OF_CREDITS_TARGET_IDS = new Set(["remove_bg_basic", "batch_process"]);
+const PRO_LOCKED_FEATURES = new Set(["background_studio", "resize_export"]);
 
 export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
   const dispatch = useAppDispatch();
   const status = useAppSelector(s => s.status.data);
   const selection = useAppSelector(s => s.figma.selection);
   const plan = status?.plan ?? "free";
+  const isPaid = !!status && status.plan !== "free";
   const spendable = !status ? 0 : (status.credits + (plan === "pro" ? status.topupCreditsPro : status.topupCreditsStarter));
   const planLimit = PLAN_LIMITS[plan] ?? 10;
   const totalLimit = Math.max(planLimit, spendable);
   const pct = totalLimit > 0 ? Math.min(100, Math.round((spendable / totalLimit) * 100)) : 0;
   const daysLeft = status?.daysLeft ?? 0;
-  // User has 0 credits left out of 10 and has not converted into Pro yet
-  const isZeroCredits = !!status && plan !== "pro" && spendable <= 0;
+  // User has 0 credits left on free tier
+  const isZeroCredits = !!status && !isPaid && spendable <= 0;
   const isStatusLoading = status === null;
 
   // ── Local image upload state ──
@@ -79,7 +80,13 @@ export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
   }
 
   function handleFeatureClick(f: FeatureDef) {
-    if (isZeroCredits && OUT_OF_CREDITS_TARGET_IDS.has(f.id)) {
+    if (f.id === "remove_bg_basic" && spendable <= 0) {
+      dispatch(addToast({
+        id: `toast_out_of_credits_${Date.now()}`,
+        kind: "warning",
+        title: "Out of credits",
+        message: "You've used all 10 images this month. Upgrade plan to continue.",
+      }));
       onManagePlan();
       return;
     }
@@ -201,12 +208,12 @@ export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
           {isZeroCredits && (
             <div style={{ marginTop: "10px", fontSize: "11px", color: "#f87171", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px" }}>
               <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
-              0 credits left out of 10. Get Pro to continue.
+              0 credits left out of 10. Upgrade plan to continue.
             </div>
           )}
         </div>
 
-        {/* ── Upgrade to Pro CTA ── */}
+        {/* ── Upgrade Plan CTA ── */}
         <button
           className="cta-btn"
           onClick={onManagePlan}
@@ -215,7 +222,7 @@ export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
             background: isZeroCredits ? "linear-gradient(135deg, #6c47ff, #9333ea)" : "var(--brand)",
             boxShadow: isZeroCredits ? "0 4px 14px rgba(108, 71, 255, 0.35)" : undefined,
           }}>
-          {isZeroCredits ? "★ Get Pro — 0 Credits Left" : plan === "pro" ? "Manage Pro Plan" : "Upgrade to Pro"}
+          {isZeroCredits ? "★ Upgrade Plan — 0 Credits Left" : isPaid ? "Manage Plan" : "Upgrade Plan"}
         </button>
 
         {/* ── IMAGE STUDIO Section ── */}
@@ -224,50 +231,26 @@ export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
         </div>
         <div className="feature-grid">
           {IMAGE_STUDIO_FEATURES.map(f => {
-            const isOutOfCredits = isZeroCredits && OUT_OF_CREDITS_TARGET_IDS.has(f.id);
+            const isUpgradeFeature = !isPaid && PRO_LOCKED_FEATURES.has(f.id);
 
             return (
               <div
                 key={f.id}
-                className={`feature-card ${isOutOfCredits ? "get-pro-card" : ""}`}
-                onClick={() => {
-                  if (isOutOfCredits) {
-                    onManagePlan();
-                    return;
-                  }
-                  if (f.id === "batch_process") {
-                    dispatch(setSection("batch"));
-                    return;
-                  }
-                  if (f.id === "background_studio") {
-                    dispatch(setSection("background_studio"));
-                    return;
-                  }
-                  if (f.id === "resize_export") {
-                    dispatch(setSection("resize_export"));
-                    return;
-                  }
-                  handleFeatureClick(f);
-                }}
+                className="feature-card"
+                onClick={() => handleFeatureClick(f)}
               >
                 <div className="feature-card-header">
                   <div className="feature-card-icon">
                     <FeatureIcon name={f.icon} size={18} />
                   </div>
-                  {isOutOfCredits && (
-                    <span className="feature-card-badge badge-get-pro">
-                      GET PRO
+                  {isUpgradeFeature && (
+                    <span className="feature-card-badge badge-get-pro" style={{ fontSize: "8.5px", padding: "2px 6px" }}>
+                      UPGRADE
                     </span>
                   )}
                 </div>
                 <div className="feature-card-name">{f.label}</div>
-                {isOutOfCredits ? (
-                  <div className="feature-card-unlock-text">
-                    Get Pro to unlock →
-                  </div>
-                ) : (
-                  <div className="feature-card-desc">{f.description}</div>
-                )}
+                <div className="feature-card-desc">{f.description}</div>
               </div>
             );
           })}

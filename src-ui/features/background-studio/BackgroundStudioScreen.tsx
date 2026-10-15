@@ -232,7 +232,7 @@ export function BackgroundStudioScreen() {
   };
 
   const handleApplyToFigma = async () => {
-    if (!foregroundImg) return;
+    if (!foregroundImg || !isPaid) return;
     setIsApplying(true);
 
     try {
@@ -305,6 +305,7 @@ export function BackgroundStudioScreen() {
 
   const status = useAppSelector((s) => s.status.data);
   const plan = status?.plan ?? "free";
+  const isPaid = !!status && status.plan !== "free";
   const spendable = !status
     ? 8
     : status.credits + (plan === "pro" ? status.topupCreditsPro : status.topupCreditsStarter);
@@ -371,6 +372,7 @@ export function BackgroundStudioScreen() {
       <StudioFooter
         isApplying={isApplying}
         canApply={!!foregroundImg}
+        isLocked={!isPaid}
         creditsRemaining={spendable}
         creditsUsed={creditsUsed}
         onReset={handleReset}

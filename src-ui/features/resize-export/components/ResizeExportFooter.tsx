@@ -1,7 +1,9 @@
-import { RotateCcw, Download, Layers } from "lucide-react";
+import { RotateCcw, Download, Layers, Lock } from "lucide-react";
+import { useState } from "react";
 
 interface Props {
   isProcessing: boolean;
+  isLocked?: boolean;
   isApplyDisabled?: boolean;
   applyDisabledReason?: string;
   onReset: () => void;
@@ -11,6 +13,7 @@ interface Props {
 
 export function ResizeExportFooter({
   isProcessing,
+  isLocked = false,
   isApplyDisabled = false,
   applyDisabledReason,
   onReset,
@@ -30,12 +33,37 @@ export function ResizeExportFooter({
         <span>Reset</span>
       </button>
 
-      <div className="re-footer-actions">
+      {isLocked && (
+        <div
+          style={{
+            fontSize: "11px",
+            color: "var(--c-text-3, #94a3b8)",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            marginLeft: "8px",
+          }}
+        >
+          <span
+            style={{
+              width: "6px",
+              height: "6px",
+              borderRadius: "50%",
+              background: "var(--brand, #6c47ff)",
+              display: "inline-block",
+            }}
+          />
+          <span>Free preview · Upgrade plan to export</span>
+        </div>
+      )}
+
+      <div className="re-footer-actions" style={{ position: "relative" }}>
         <button
           type="button"
           className="re-footer-download-btn"
-          onClick={onDownload}
-          disabled={isProcessing}
+          onClick={isLocked ? undefined : onDownload}
+          disabled={isLocked || isProcessing}
+          tabIndex={isLocked ? -1 : 0}
         >
           <Download size={14} />
           <span>Download</span>
@@ -44,8 +72,9 @@ export function ResizeExportFooter({
         <button
           type="button"
           className="re-footer-apply-btn"
-          onClick={onApplyToFigma}
-          disabled={isProcessing || isApplyDisabled}
+          onClick={isLocked ? undefined : onApplyToFigma}
+          disabled={isLocked || isProcessing || isApplyDisabled}
+          tabIndex={isLocked ? -1 : 0}
           title={
             isApplyDisabled
               ? applyDisabledReason || "WebP is download-only (Figma does not support WebP)"
@@ -55,6 +84,18 @@ export function ResizeExportFooter({
           <Layers size={14} />
           <span>Apply to Figma</span>
         </button>
+
+        {isLocked && (
+          <div
+            className="re-actions-lock-overlay"
+            title="Upgrade plan to download or apply to Figma"
+          >
+            <div className="re-actions-lock-pill">
+              <Lock size={12} />
+              <span>Upgrade Plan</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
