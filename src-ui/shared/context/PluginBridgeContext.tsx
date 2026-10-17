@@ -13,7 +13,6 @@ import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { setUserIdentity, setSelection, setPreviewUrl, setImageFormat } from "../../app/slices/figmaSlice";
 import { detectImageFormat } from "../utils/imageFormat";
 import { setPlanStatus } from "../../app/slices/statusSlice";
-import { setProcessing } from "../../app/slices/uiSlice";
 import type { PluginToUIMessage, UIToPluginMessage, SelectionNodeRef } from "../types/messages";
 import type { PlanStatus } from "../types/api";
 

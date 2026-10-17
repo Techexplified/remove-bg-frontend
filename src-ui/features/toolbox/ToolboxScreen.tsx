@@ -208,9 +208,9 @@ export function ToolboxScreen({
 
   // Credits calculation
   const planStatus = useAppSelector(s => s.status.data);
-  const PLAN_LIMITS: Record<string, number> = { free: 10, starter: 100, pro: 250 };
+  const PLAN_LIMITS: Record<string, number> = { free: 3, starter: 50, pro: 200 };
   const plan = planStatus?.plan ?? "free";
-  const totalAllotted = PLAN_LIMITS[plan] ?? 10;
+  const totalAllotted = PLAN_LIMITS[plan] ?? 3;
   const spendable = !planStatus ? 0 : (planStatus.credits + (plan === "pro" ? planStatus.topupCreditsPro : planStatus.topupCreditsStarter));
   const creditsRemaining = spendable;
   const creditsUsed = Math.max(0, totalAllotted - spendable);
@@ -615,6 +615,7 @@ export function ToolboxScreen({
             format={imageFormat || "PNG"}
             creditsRemaining={creditsRemaining}
             creditsUsed={creditsUsed}
+            plan={plan}
           />
         )}
 

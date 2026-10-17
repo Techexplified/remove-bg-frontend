@@ -1,9 +1,9 @@
 import { useRef, useState, useCallback } from "react";
-import { Sparkles, Crop, Palette, FileOutput, Layers, Sun, Lightbulb, ZoomIn, Wand2, PenTool, Upload, Settings, SlidersHorizontal, Copy, Scissors } from "lucide-react";
+import { Sparkles, Crop, Palette, FileOutput, Layers, Sun, Lightbulb, ZoomIn, Wand2, PenTool, Copy, Scissors, SlidersHorizontal, Settings, Upload } from "lucide-react";
 import type { LucideProps } from "lucide-react";
 import type { FC } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
-import { openModal, setAIFeature, setSection, addToast } from "../../app/slices/uiSlice";
+import { setSection, addToast } from "../../app/slices/uiSlice";
 import { IMAGE_STUDIO_FEATURES, PLAN_LIMITS } from "../../shared/types/featureData";
 import type { FeatureDef } from "../../shared/types/features";
 
@@ -45,7 +45,7 @@ export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
   const plan = status?.plan ?? "free";
   const isPaid = !!status && status.plan !== "free";
   const spendable = !status ? 0 : (status.credits + (plan === "pro" ? status.topupCreditsPro : status.topupCreditsStarter));
-  const planLimit = PLAN_LIMITS[plan] ?? 10;
+  const planLimit = PLAN_LIMITS[plan] ?? 3;
   const totalLimit = Math.max(planLimit, spendable);
   const pct = totalLimit > 0 ? Math.min(100, Math.round((spendable / totalLimit) * 100)) : 0;
   const daysLeft = status?.daysLeft ?? 0;
@@ -85,7 +85,9 @@ export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
         id: `toast_out_of_credits_${Date.now()}`,
         kind: "warning",
         title: "Out of credits",
-        message: "You've used all 10 images this month. Upgrade plan to continue.",
+        message: status?.plan === "free"
+          ? "You've used all 3 free images. Upgrade plan to continue."
+          : "You've used all your images this month. Upgrade plan to continue.",
       }));
       onManagePlan();
       return;
@@ -185,7 +187,7 @@ export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
         <div className="credit-card" style={{ marginBottom: "12px" }}>
           <div className="credit-card-header">
             <span>Remaining Credits {!isStatusLoading && plan !== "free" && <span className={`badge badge-${plan}`} style={{ marginLeft: "4px" }}>{plan.toUpperCase()}</span>}</span>
-            {daysLeft > 0 && <span style={{ fontSize: "10px", color: "var(--c-text-3)" }}>Resets in {daysLeft}d</span>}
+            {plan !== "free" && daysLeft > 0 && <span style={{ fontSize: "10px", color: "var(--c-text-3)" }}>Resets in {daysLeft}d</span>}
           </div>
           <div className="credit-card-numbers">
             {isStatusLoading ? (
@@ -208,7 +210,7 @@ export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
           {isZeroCredits && (
             <div style={{ marginTop: "10px", fontSize: "11px", color: "#f87171", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px" }}>
               <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
-              0 credits left out of 10. Upgrade plan to continue.
+              {plan === "free" ? "0 free images left out of 3. Upgrade plan to continue." : "0 credits left. Upgrade plan to continue."}
             </div>
           )}
         </div>

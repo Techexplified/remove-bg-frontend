@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sparkles, Shield, X } from "lucide-react";
+import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
 import { closeModal } from "../../../app/slices/uiSlice";
@@ -16,11 +16,8 @@ export function TopUpModal({ onCheckoutOpen }: Props) {
   const planStatus = useAppSelector(s => s.status.data);
   const [isLoading, setIsLoading] = useState(false);
   const plan = planStatus?.plan ?? "free";
-  const isFree = plan === "free";
-  const canBuy = planStatus?.canBuyTopup ?? false;
-  const proLocked = planStatus?.featuresLocked === true;
   const spendable = !planStatus ? 0 : (planStatus.credits + (plan === "pro" ? planStatus.topupCreditsPro : planStatus.topupCreditsStarter));
-  const planLimit = PLAN_LIMITS[plan] ?? 10;
+  const planLimit = PLAN_LIMITS[plan] ?? 3;
   const totalLimit = Math.max(planLimit, spendable);
   const pct = totalLimit > 0 ? Math.min(100, Math.round((spendable / totalLimit) * 100)) : 0;
 

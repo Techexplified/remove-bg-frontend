@@ -309,7 +309,7 @@ export function BackgroundStudioScreen() {
   const spendable = !status
     ? 8
     : status.credits + (plan === "pro" ? status.topupCreditsPro : status.topupCreditsStarter);
-  const planLimit = plan === "pro" ? 200 : plan === "starter" ? 40 : 10;
+  const planLimit = plan === "pro" ? 200 : plan === "starter" ? 50 : 3;
   const creditsUsed = Math.max(0, planLimit - spendable);
 
   return (

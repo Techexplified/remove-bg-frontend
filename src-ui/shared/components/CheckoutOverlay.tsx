@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle, Loader2, X } from "lucide-react";
+import { CheckCircle, Loader2 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { setCheckoutOverlay } from "../../app/slices/uiSlice";
 

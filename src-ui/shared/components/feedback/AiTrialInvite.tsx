@@ -15,7 +15,7 @@ export function AiTrialInvite({ originalImageBytes }: Props) {
   const status = useAppSelector(s => s.status.data);
   const bridge = usePluginBridgeContext();
 
-  const [hasAlreadyBeenOffered, setHasAlreadyBeenOffered] = useState<boolean>(() => {
+  const [hasAlreadyBeenOffered] = useState<boolean>(() => {
     try {
       return localStorage.getItem("removebg_ai_trial_offered") === "true" || localStorage.getItem("zerobg_ai_trial_offered") === "true";
     } catch {
@@ -63,7 +63,7 @@ export function AiTrialInvite({ originalImageBytes }: Props) {
     setLoading(true);
     try {
       const resultBytes = await runAiTrial(originalImageBytes);
-      const blob = new Blob([resultBytes], { type: "image/png" });
+      const blob = new Blob([resultBytes as unknown as BlobPart], { type: "image/png" });
       const url = URL.createObjectURL(blob);
       setAiResultUrl(url);
 

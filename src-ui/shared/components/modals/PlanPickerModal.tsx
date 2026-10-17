@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, X, ExternalLink, AlertTriangle, Calendar, ChevronRight, ArrowRight, Sparkles } from "lucide-react";
+import { Check, X, AlertTriangle, Calendar, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
 import { closeModal, setShowExitIntent } from "../../../app/slices/uiSlice";
@@ -11,13 +11,13 @@ interface Props {
 }
 
 const FREE_FEATURES = [
-  "10 images/month",
+  "3 free images",
   "Remove Background",
   "Batch Process",
 ];
 
 const STARTER_FEATURES = [
-  "40 images/month",
+  "50 images/month",
   "Remove Background",
   "Batch Process",
   "Background Studio",
@@ -39,7 +39,6 @@ export function PlanPickerModal({ onCheckoutOpen, onScheduled }: Props) {
   const isCancelling = !!status?.scheduledCancelAt;
   const isDowngradeScheduled = status?.scheduledPlanChange === "starter";
   const renewLabel = fmtDate(status?.subscriptionEndsAt);
-  const proLocked = status?.featuresLocked === true;
 
   function handleDismiss() {
     dispatch(closeModal());
@@ -140,7 +139,7 @@ export function PlanPickerModal({ onCheckoutOpen, onScheduled }: Props) {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <div style={{ fontSize: "12px", fontWeight: "700", color: "var(--c-text)" }}>Downgrade to Starter</div>
-                    <div style={{ fontSize: "10.5px", color: "var(--c-text-3)", marginTop: "3px" }}>$12/month · 40 credits/month</div>
+                    <div style={{ fontSize: "10.5px", color: "var(--c-text-3)", marginTop: "3px" }}>$5/month · 50 images/month</div>
                     <div style={{ fontSize: "10px", color: "var(--c-text-3)", marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
                       <Calendar size={10} /> Effective at end of current billing period
                     </div>
@@ -187,10 +186,10 @@ export function PlanPickerModal({ onCheckoutOpen, onScheduled }: Props) {
               <div style={{ background: "var(--c-bg-2)", borderRadius: "12px", border: "1px solid var(--c-border)", padding: "14px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
                   <span style={{ fontSize: "10px", fontWeight: "700", padding: "3px 9px", background: "rgba(108,71,255,.08)", borderRadius: "100px", color: "var(--brand)", textTransform: "uppercase" }}>★ Starter Plan</span>
-                  <span style={{ fontSize: "11px", color: "var(--c-text-2)" }}>$12/month</span>
+                  <span style={{ fontSize: "11px", color: "var(--c-text-2)" }}>$5/month</span>
                 </div>
                 <div style={{ fontSize: "10.5px", color: "var(--c-text-3)", lineHeight: "1.5" }}>
-                  Renews {renewLabel ?? "next billing date"} · 40 images/month
+                  Renews {renewLabel ?? "next billing date"} · 50 images/month
                 </div>
               </div>
               <button onClick={() => dispatch(closeModal())} style={{ width: "100%", background: "var(--c-bg-2)", border: "1px solid var(--c-border)", color: "var(--c-text-2)", padding: "10px", borderRadius: "10px", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>
@@ -228,7 +227,7 @@ export function PlanPickerModal({ onCheckoutOpen, onScheduled }: Props) {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <span style={{ fontSize: "13px", fontWeight: "800", color: "var(--c-text)" }}>FREE</span>
-                  <span style={{ fontSize: "10px", color: "var(--c-text-3)" }}>10 images/mo</span>
+                  <span style={{ fontSize: "10px", color: "var(--c-text-3)" }}>3 free images</span>
                 </div>
                 <span style={{ fontSize: "8.5px", fontWeight: "700", padding: "2px 7px", background: "rgba(0, 0, 0, 0.05)", borderRadius: "100px", color: "var(--c-text-3)" }}>CURRENT PLAN</span>
               </div>
@@ -247,12 +246,12 @@ export function PlanPickerModal({ onCheckoutOpen, onScheduled }: Props) {
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--brand)" }} />
                   <span style={{ fontSize: "14px", fontWeight: "800", color: "var(--c-text)" }}>STARTER</span>
-                  <span style={{ fontSize: "10px", color: "var(--c-text-3)" }}>40 images/mo</span>
+                  <span style={{ fontSize: "10px", color: "var(--c-text-3)" }}>50 images/mo</span>
                 </div>
                 <span style={{ fontSize: "8.5px", fontWeight: "800", padding: "2px 7px", background: "rgba(108, 71, 255, 0.12)", borderRadius: "100px", color: "var(--brand)", border: "1px solid rgba(108, 71, 255, 0.25)" }}>POPULAR</span>
               </div>
               <div style={{ fontSize: "20px", fontWeight: "800", color: "var(--c-text)", marginBottom: "8px" }}>
-                $12 <span style={{ fontSize: "11px", color: "var(--c-text-3)", fontWeight: "400" }}>/ month</span>
+                $5 <span style={{ fontSize: "11px", color: "var(--c-text-3)", fontWeight: "400" }}>/ month</span>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginBottom: "12px" }}>
                 {STARTER_FEATURES.map(item => (

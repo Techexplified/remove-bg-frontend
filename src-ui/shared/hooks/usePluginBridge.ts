@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef } from "react";
 import { useAppDispatch } from "../../app/hooks";
 import { setUserIdentity, setSelection, setPreviewUrl, setImageFormat } from "../../app/slices/figmaSlice";
 import { detectImageFormat } from "../utils/imageFormat";
-import { setProcessing } from "../../app/slices/uiSlice";
 import type { PluginToUIMessage, UIToPluginMessage, SelectionNodeRef } from "../types/messages";
 
 function send(msg: UIToPluginMessage) {

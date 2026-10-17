@@ -1,10 +1,7 @@
-import { useEffect, useState } from "react";
-import { RefreshCw, ExternalLink, CreditCard, X, Calendar } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { loadPlanStatus } from "../../app/slices/statusSlice";
-import { fetchManagePlanUrls, cancelSubscription, reactivateSubscription, ApiError } from "../../shared/api/client";
-import type { ManagePlanUrls } from "../../shared/types/api";
-import { addToast } from "../../app/slices/uiSlice";
+import { fetchManagePlanUrls } from "../../shared/api/client";
 import { PLAN_LIMITS } from "../../shared/types/featureData";
 
 interface Props { onManagePlan: () => void; onTopUp: () => void; openExternal: (url: string) => void; watching: boolean; onStopWatching: () => void; }
@@ -24,81 +21,30 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-export function AccountScreen({ onManagePlan, onTopUp, openExternal, watching, onStopWatching }: Props) {
+export function AccountScreen({ onManagePlan, onTopUp, openExternal }: Props) {
   const dispatch = useAppDispatch();
   const status = useAppSelector(s => s.status.data);
-  const isLoading = useAppSelector(s => s.status.loading);
   const refetch = () => dispatch(loadPlanStatus());
   const displayName = useAppSelector(s => s.figma.displayName);
   const userId = useAppSelector(s => s.figma.userId);
-  const [portalOpen, setPortalOpen] = useState(false);
-  const [portalUrls, setPortalUrls] = useState<ManagePlanUrls | null>(null);
-  const [portalLoading, setPortalLoading] = useState(false);
-  const [portalError, setPortalError] = useState<string | null>(null);
-  const [submittingAction, setSubmittingAction] = useState<"cancel" | "reactivate" | null>(null);
 
-  async function handleCancel() {
-    setSubmittingAction("cancel");
+  async function handleManageBilling() {
     try {
-      const res = await cancelSubscription();
-      dispatch(loadPlanStatus());
-      dispatch(addToast({
-        id: `toast_cancel_${Date.now()}`,
-        kind: "warning",
-        title: "Cancellation scheduled",
-        message: res.message || `Your subscription will cancel on ${fmtDate(res.cancelsAt)}.`
-      }));
-    } catch (err) {
-      dispatch(addToast({
-        id: `toast_cancel_err_${Date.now()}`,
-        kind: "error",
-        title: "Cancel failed",
-        message: err instanceof ApiError ? err.message : "Could not cancel subscription."
-      }));
-    } finally {
-      setSubmittingAction(null);
+      const urls = await fetchManagePlanUrls();
+      if (urls.portalUrl) {
+        openExternal(urls.portalUrl);
+      } else {
+        onManagePlan();
+      }
+    } catch {
+      onManagePlan();
     }
   }
-
-  async function handleReactivate() {
-    setSubmittingAction("reactivate");
-    try {
-      const res = await reactivateSubscription();
-      dispatch(loadPlanStatus());
-      dispatch(addToast({
-        id: `toast_reactivate_${Date.now()}`,
-        kind: "success",
-        title: "Subscription reactivated",
-        message: res.message || "Your subscription has been reactivated."
-      }));
-    } catch (err) {
-      dispatch(addToast({
-        id: `toast_reactivate_err_${Date.now()}`,
-        kind: "error",
-        title: "Reactivate failed",
-        message: err instanceof ApiError ? err.message : "Could not reactivate subscription."
-      }));
-    } finally {
-      setSubmittingAction(null);
-    }
-  }
-
-  useEffect(() => {
-    if (!portalOpen || status?.plan === "free") return;
-    let cancelled = false;
-    setPortalLoading(true);
-    setPortalError(null);
-    fetchManagePlanUrls()
-      .then((urls) => { if (!cancelled) setPortalUrls(urls); })
-      .catch((err) => { if (!cancelled) setPortalError(err instanceof ApiError ? err.message : "network error"); })
-      .finally(() => { if (!cancelled) setPortalLoading(false); });
-    return () => { cancelled = true; };
-  }, [portalOpen, status?.plan]);
 
   const plan = status?.plan ?? "free";
   const isFree = plan === "free";
   const monthlyCredits = status?.credits ?? 0;
-  const limit = PLAN_LIMITS[plan] ?? 10;
+  const limit = PLAN_LIMITS[plan] ?? 3;
   const spendableTopup = plan === "pro" ? (status?.topupCreditsPro ?? 0) : plan === "starter" ? (status?.topupCreditsStarter ?? 0) : 0;
   const remainingPct = limit > 0 ? Math.min(100, Math.max(0, Math.round((monthlyCredits / limit) * 100))) : 0;
 
@@ -143,7 +89,15 @@ export function AccountScreen({ onManagePlan, onTopUp, openExternal, watching, o
                 {plan.toUpperCase()}
               </div>
               <div style={{ fontSize: "11px", color: "var(--c-text-3)", marginTop: "4px" }}>
-                You have <strong style={{ color: "var(--brand)" }}>{monthlyCredits}</strong> of {limit} credits remaining from your monthly quota{spendableTopup > 0 ? ` (+${spendableTopup} top-up)` : ""}.
+                {isFree ? (
+                  <>
+                    You have <strong style={{ color: "var(--brand)" }}>{monthlyCredits}</strong> of {limit} free images remaining{spendableTopup > 0 ? ` (+${spendableTopup} top-up)` : ""}.
+                  </>
+                ) : (
+                  <>
+                    You have <strong style={{ color: "var(--brand)" }}>{monthlyCredits}</strong> of {limit} credits remaining from your monthly quota{spendableTopup > 0 ? ` (+${spendableTopup} top-up)` : ""}.
+                  </>
+                )}
               </div>
             </div>
 
@@ -226,7 +180,7 @@ export function AccountScreen({ onManagePlan, onTopUp, openExternal, watching, o
           <button
             className="btn btn-block"
             style={{ height: "42px", borderRadius: "12px", background: "var(--c-bg-2)", border: "1px solid var(--c-border)", fontWeight: "700" }}
-            onClick={() => setPortalOpen(true)}>
+            onClick={handleManageBilling}>
             Manage Billing & Invoice
           </button>
         )}

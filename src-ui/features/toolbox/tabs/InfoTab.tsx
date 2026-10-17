@@ -7,6 +7,7 @@ interface Props {
   format: string;
   creditsRemaining: number;
   creditsUsed: number;
+  plan?: string;
 }
 
 export function InfoTab({
@@ -16,6 +17,7 @@ export function InfoTab({
   format,
   creditsRemaining,
   creditsUsed,
+  plan = "free",
 }: Props) {
   const displayW = width > 0 ? width : 1024;
   const displayH = height > 0 ? height : 1024;
@@ -78,15 +80,15 @@ export function InfoTab({
             </span>
           </div>
 
-          {/* Monthly Usage */}
+          {/* Usage */}
           <div className="info-tab-row">
             <div className="info-tab-row-left">
               <div className="info-tab-icon-wrap">
                 <Clock size={13} />
               </div>
-              <span className="info-tab-label">Monthly Usage</span>
+              <span className="info-tab-label">{plan === "free" ? "Credits Used" : "Monthly Usage"}</span>
             </div>
-            <span className="info-tab-value">{creditsUsed} used this month</span>
+            <span className="info-tab-value">{creditsUsed} {plan === "free" ? "used" : "used this month"}</span>
           </div>
         </div>
       </div>

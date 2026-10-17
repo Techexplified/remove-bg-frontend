@@ -72,7 +72,7 @@ export function HeroCard({ onManagePlan, onTopUp, watching, onStopWatching }: Pr
               ● Active
             </span>
           )}
-          {daysLeft > 0 && (
+          {status.plan !== "free" && daysLeft > 0 && (
             <span className="badge" style={{ background: "#fbbf24", color: "#000", border: "none", fontSize: "9px", textTransform: "none", padding: "2px 7px" }}>
               {daysLeft} days left
             </span>
@@ -90,7 +90,7 @@ export function HeroCard({ onManagePlan, onTopUp, watching, onStopWatching }: Pr
           <div style={{ fontSize: "10.5px", color: "rgba(255,255,255,.4)", marginTop: "2px" }}>credits remaining</div>
         </div>
         <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
-          {daysLeft > 0 && (
+          {status.plan !== "free" && daysLeft > 0 && (
             <div style={{ fontSize: "10.5px", color: "rgba(255,255,255,.4)" }}>
               Resets in {daysLeft} days
             </div>
@@ -105,7 +105,7 @@ export function HeroCard({ onManagePlan, onTopUp, watching, onStopWatching }: Pr
       {spendableTopup > 0 && (
         <div className="hero-topup-credits" style={{ marginTop: "-4px" }}>
           <span className="hero-topup-num"><Zap size={11} style={{ display: "inline", marginRight: 3 }} />+{spendableTopup}</span>
-          <span className="hero-topup-label">top-up (auto-used when monthly runs out)</span>
+          <span className="hero-topup-label">top-up (auto-used when plan credits run out)</span>
         </div>
       )}
 

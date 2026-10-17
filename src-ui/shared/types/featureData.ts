@@ -71,7 +71,7 @@ export const IMAGE_STUDIO_FEATURES: FeatureDef[] = [
 ];
 
 export const PLAN_RANK: Record<string, number> = { free: 0, starter: 1, pro: 2 };
-export const PLAN_LIMITS: Record<string, number> = { free: 10, starter: 40, pro: 200 };
+export const PLAN_LIMITS: Record<string, number> = { free: 3, starter: 50, pro: 200 };
 
 export function isFeatureUnlocked(feature: FeatureDef, plan: string): boolean {
   return PLAN_RANK[plan] >= PLAN_RANK[feature.minPlan];

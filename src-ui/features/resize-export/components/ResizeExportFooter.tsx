@@ -1,5 +1,4 @@
 import { RotateCcw, Download, Layers, Lock } from "lucide-react";
-import { useState } from "react";
 
 interface Props {
   isProcessing: boolean;
