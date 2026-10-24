@@ -9,6 +9,7 @@ import { BackgroundTab } from "./tabs/BackgroundTab";
 import { AdjustTab } from "./tabs/AdjustTab";
 import { SizeTab } from "./tabs/SizeTab";
 import { InfoTab } from "./tabs/InfoTab";
+import { checkImageHasTransparency, detectTransparencyFromUrl } from "../../shared/utils/transparency";
 
 interface Props {
   onApplyAdjustments: (
@@ -23,6 +24,7 @@ interface Props {
   exportNode?: (id: string) => Promise<Uint8Array>;
   insertResultImage?: (bytes: Uint8Array) => void;
   notify: (msg: string) => void;
+  onRemoveBackground?: () => Promise<boolean>;
 }
 
 type PresetId =
@@ -164,6 +166,137 @@ function formatBytes(bytes: number): string {
   return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
+// ── Canvas composite helper for Downloads & Upload insertions ─────────────────
+async function compositeToolboxImage({
+  imageUrl,
+  width,
+  height,
+  preset,
+  customBgUrl,
+  brightness,
+  contrast,
+  saturation,
+  opacity,
+  filterCss,
+}: {
+  imageUrl: string;
+  width?: number;
+  height?: number;
+  preset: PresetId;
+  customBgUrl?: string | null;
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  opacity: number;
+  filterCss?: string;
+}): Promise<{ dataUrl: string; bytes: Uint8Array }> {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Could not get canvas context");
+
+  const fgImg = new Image();
+  fgImg.crossOrigin = "anonymous";
+  fgImg.src = imageUrl;
+
+  let bgImg: HTMLImageElement | null = null;
+  if (preset === "custom-image" && customBgUrl) {
+    bgImg = new Image();
+    bgImg.crossOrigin = "anonymous";
+    bgImg.src = customBgUrl;
+  }
+
+  const loadPromises: Promise<unknown>[] = [
+    new Promise((resolve, reject) => {
+      if (fgImg.complete && fgImg.naturalWidth > 0) resolve(null);
+      else { fgImg.onload = resolve; fgImg.onerror = reject; }
+    }),
+  ];
+  if (bgImg) {
+    loadPromises.push(
+      new Promise((resolve, reject) => {
+        if (bgImg!.complete && bgImg!.naturalWidth > 0) resolve(null);
+        else { bgImg!.onload = resolve; bgImg!.onerror = reject; }
+      })
+    );
+  }
+  await Promise.all(loadPromises);
+
+  const w = width || fgImg.naturalWidth || 1024;
+  const h = height || fgImg.naturalHeight || 1024;
+  canvas.width = w;
+  canvas.height = h;
+
+  // 1. Draw Background
+  if (preset === "white") {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+  } else if (preset === "black" || preset === "#000000") {
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, w, h);
+  } else if (preset === "sand") {
+    ctx.fillStyle = "#f5e6d3";
+    ctx.fillRect(0, 0, w, h);
+  } else if (preset === "wood") {
+    ctx.fillStyle = "#8B5A2B";
+    ctx.fillRect(0, 0, w, h);
+  } else if (preset === "sky") {
+    ctx.fillStyle = "#87CEEB";
+    ctx.fillRect(0, 0, w, h);
+  } else if (preset === "lavender") {
+    ctx.fillStyle = "#E6E6FA";
+    ctx.fillRect(0, 0, w, h);
+  } else if (preset === "mint") {
+    ctx.fillStyle = "#bdfcc9";
+    ctx.fillRect(0, 0, w, h);
+  } else if (preset === "steel") {
+    ctx.fillStyle = "#9ca3af";
+    ctx.fillRect(0, 0, w, h);
+  } else if (preset === "gradient") {
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, "#6c47ff");
+    grad.addColorStop(1, "#ec4899");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+  } else if (preset === "shadow") {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+  } else if (preset === "custom-image" && bgImg) {
+    ctx.drawImage(bgImg, 0, 0, w, h);
+  } else if (preset.startsWith("#")) {
+    ctx.fillStyle = preset;
+    ctx.fillRect(0, 0, w, h);
+  }
+  // If "transparent", do nothing (canvas remains transparent)
+
+  // 2. Draw Foreground with adjustments
+  ctx.save();
+  ctx.globalAlpha = opacity / 100;
+
+  const filterTokens: string[] = [];
+  if (brightness !== 50) filterTokens.push(`brightness(${brightness / 50})`);
+  if (contrast !== 50) filterTokens.push(`contrast(${contrast / 50})`);
+  if (saturation !== 50) filterTokens.push(`saturate(${saturation / 50})`);
+  if (filterCss && filterCss !== "none") filterTokens.push(filterCss);
+  if (preset === "shadow") filterTokens.push("drop-shadow(0 12px 24px rgba(0,0,0,0.25))");
+
+  if (filterTokens.length > 0) {
+    ctx.filter = filterTokens.join(" ");
+  }
+
+  ctx.drawImage(fgImg, 0, 0, w, h);
+  ctx.restore();
+
+  const dataUrl = canvas.toDataURL("image/png");
+  const base64Data = dataUrl.split(",")[1];
+  const binaryString = atob(base64Data);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+
+  return { dataUrl, bytes };
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export function ToolboxScreen({
   onApplyAdjustments,
@@ -172,9 +305,16 @@ export function ToolboxScreen({
   exportNode: _exportNode,
   insertResultImage: _insertResultImage,
   notify,
+  onRemoveBackground,
 }: Props) {
   const dispatch = useAppDispatch();
-  const { selection, previewUrl, originalUrl, imageFormat } = useAppSelector(s => s.figma);
+  const { selection, previewUrl, originalUrl, imageFormat, uploadedImage, activeImageSource } = useAppSelector(s => s.figma);
+  const currentUrl = (activeImageSource === "upload" && uploadedImage)
+    ? uploadedImage.previewUrl
+    : (activeImageSource === "canvas" && selection.hasSelection ? previewUrl : null);
+  const currentOriginalUrl = (activeImageSource === "upload" && uploadedImage)
+    ? (uploadedImage.originalPreviewUrl || uploadedImage.previewUrl)
+    : (activeImageSource === "canvas" && selection.hasSelection ? (originalUrl || previewUrl) : null);
 
   const [activeTab, setActiveTab] = useState<ToolboxTabId>("background");
   const [activePreview, setActivePreview] = useState<"result" | "original">("result");
@@ -190,13 +330,15 @@ export function ToolboxScreen({
   const dragRef = useRef<{ sx: number; sy: number; px: number; py: number } | null>(null);
 
   const [opacity, setOpacity] = useState(100);
-  const [brightness, setBrightness] = useState(60);
-  const [saturation, setSaturation] = useState(80);
-  const [contrast, setContrast] = useState(45);
+  const [brightness, setBrightness] = useState(50);
+  const [saturation, setSaturation] = useState(50);
+  const [contrast, setContrast] = useState(50);
 
   const [activeFilter, setActiveFilter] = useState<ImageFilterId>("normal");
 
   const [isApplying, setIsApplying] = useState(false);
+  const [hasTransparency, setHasTransparency] = useState<boolean>(true);
+  const [isRemovingBg, setIsRemovingBg] = useState<boolean>(false);
 
   const sessionOriginalRef = useRef<string | null>(null);
 
@@ -220,7 +362,7 @@ export function ToolboxScreen({
 
   useEffect(() => {
     let isMounted = true;
-    const targetUrl = previewUrl || originalUrl;
+    const targetUrl = currentUrl || currentOriginalUrl;
 
     if (!targetUrl) {
       if (selection.hasSelection && selection.width && selection.height) {
@@ -253,9 +395,9 @@ export function ToolboxScreen({
     return () => {
       isMounted = false;
     };
-  }, [previewUrl, originalUrl, selection]);
+  }, [currentUrl, currentOriginalUrl, selection]);
 
-  // Reset editor settings, zoom, pan & session original when selection changes
+  // Reset editor settings, zoom, pan & session original when selection or source changes
   useEffect(() => {
     setZoom(100);
     setPan({ x: 0, y: 0 });
@@ -264,40 +406,81 @@ export function ToolboxScreen({
     setActiveColor(null);
     setActivePreview("result");
     setOpacity(100);
-    setBrightness(60);
-    setSaturation(80);
-    setContrast(45);
+    setBrightness(50);
+    setSaturation(50);
+    setContrast(50);
     setActiveFilter("normal");
     setActiveTab("background");
     if (customBgUrl) URL.revokeObjectURL(customBgUrl);
     setCustomBgUrl(null);
     setCustomBgBytes(null);
-  }, [selection]);
+    if (!selection.hasSelection && !uploadedImage) {
+      setHasTransparency(true);
+    }
+  }, [selection, activeImageSource, uploadedImage?.previewUrl]);
 
   // Reset pan when zoom snaps back to 100
   useEffect(() => {
     if (zoom === 100) setPan({ x: 0, y: 0 });
   }, [zoom]);
 
-  // Clear applying flag when new previewUrl arrives
+  // Clear applying flag when new currentUrl arrives
   useEffect(() => {
-    if (previewUrl) setIsApplying(false);
-  }, [previewUrl]);
+    if (currentUrl) setIsApplying(false);
+  }, [currentUrl]);
 
-  // Auto-capture session original on first previewUrl per selection
+  // Auto-capture session original on first currentUrl per selection
   useEffect(() => {
-    if (previewUrl && !sessionOriginalRef.current) {
-      sessionOriginalRef.current = previewUrl;
+    if (currentUrl && !sessionOriginalRef.current) {
+      sessionOriginalRef.current = currentUrl;
+    } else if (!currentUrl) {
+      sessionOriginalRef.current = null;
     }
-  }, [previewUrl]);
+  }, [currentUrl]);
 
-  // Extract & deduplicate colours when image loads
+  // Auto-detect transparency when currentUrl updates
+  useEffect(() => {
+    if (currentUrl) {
+      let isMounted = true;
+      detectTransparencyFromUrl(currentUrl).then(hasT => {
+        if (isMounted) setHasTransparency(hasT);
+      });
+      return () => {
+        isMounted = false;
+      };
+    } else {
+      setHasTransparency(true);
+    }
+  }, [currentUrl]);
+
+  // Extract & deduplicate colours and check transparency when image loads
   const runExtract = useCallback((img: HTMLImageElement) => {
     imgRef.current = img;
     const extracted = extractDominantColors(img, 10);
     setColors(extracted);
     setActiveColor(null);
+    try {
+      const isTransparent = checkImageHasTransparency(img);
+      setHasTransparency(isTransparent);
+    } catch {
+      // Don't arbitrarily force true if check fails
+    }
   }, []);
+
+  const handleRemoveBgInToolbox = async () => {
+    if (!onRemoveBackground) return;
+    setIsRemovingBg(true);
+    try {
+      const success = await onRemoveBackground();
+      if (success) {
+        notify("Background removed successfully!");
+      }
+    } catch {
+      notify("Failed to remove background.");
+    } finally {
+      setIsRemovingBg(false);
+    }
+  };
 
   function handleRefreshColors() {
     if (imgRef.current) {
@@ -320,15 +503,41 @@ export function ToolboxScreen({
     setActivePreset(hex);
   }
 
-  const canApply = selection.hasSelection;
+  const canApply = selection.hasSelection || !!uploadedImage;
 
-  function handleApply() {
+  async function handleApply() {
     if (!canApply) { notify("Select a layer first."); return; }
-    onApplyAdjustments(
-      brightness, contrast, saturation, opacity, activePreset, activeFilter,
-      activePreset === "custom-image" && customBgBytes ? customBgBytes : undefined
-    );
     setIsApplying(true);
+    try {
+      if (!selection.hasSelection && uploadedImage) {
+        if (_insertResultImage && currentUrl) {
+          const { bytes } = await compositeToolboxImage({
+            imageUrl: currentUrl,
+            width: uploadedImage.width,
+            height: uploadedImage.height,
+            preset: activePreset,
+            customBgUrl,
+            brightness,
+            contrast,
+            saturation,
+            opacity,
+            filterCss: namedFilterCss,
+          });
+          _insertResultImage(bytes);
+          notify("Inserted image with adjustments onto Figma canvas.");
+          setIsApplying(false);
+          return;
+        }
+      }
+
+      onApplyAdjustments(
+        brightness, contrast, saturation, opacity, activePreset, activeFilter,
+        activePreset === "custom-image" && customBgBytes ? customBgBytes : undefined
+      );
+    } catch {
+      notify("Failed to apply adjustments.");
+      setIsApplying(false);
+    }
   }
 
   // ── Pan handlers (drag-to-pan when zoom > 100) ──────────────────────────────
@@ -355,10 +564,25 @@ export function ToolboxScreen({
     setPan({ x: 0, y: 0 });
   }
 
-  const effectiveOriginalUrl = originalUrl ?? sessionOriginalRef.current ?? previewUrl;
+  const effectiveOriginalUrl = currentOriginalUrl ?? sessionOriginalRef.current ?? currentUrl;
 
-  const currentFilter = IMAGE_FILTERS.find(f => f.id === activeFilter)!;
-  const imgCssFilter = currentFilter?.css ?? "none";
+  const currentFilter = IMAGE_FILTERS.find(f => f.id === activeFilter);
+  const namedFilterCss = currentFilter?.css && currentFilter.css !== "none" ? currentFilter.css : "";
+
+  // 50 is neutral (1.0 = 100%)
+  const cssBrightness = brightness / 50;
+  const cssContrast = contrast / 50;
+  const cssSaturation = saturation / 50;
+  const cssOpacity = opacity / 100;
+
+  const filterTokens: string[] = [];
+  if (brightness !== 50) filterTokens.push(`brightness(${cssBrightness})`);
+  if (contrast !== 50) filterTokens.push(`contrast(${cssContrast})`);
+  if (saturation !== 50) filterTokens.push(`saturate(${cssSaturation})`);
+  if (namedFilterCss) filterTokens.push(namedFilterCss);
+  if (activePreset === "shadow") filterTokens.push("drop-shadow(0 10px 20px rgba(0,0,0,0.22))");
+
+  const combinedImgFilter = filterTokens.length > 0 ? filterTokens.join(" ") : "none";
 
   // Clamp pan so the image never fully leaves the viewport (based on zoom level)
   // Max sensible offset in each axis = container size × (scale − 1) / 2
@@ -370,47 +594,31 @@ export function ToolboxScreen({
 
   // Instant Download
   const handleInstatDownlod = async () => {
-    if (!previewUrl) {
+    if (!currentUrl) {
       notify("No image available to download.");
       return;
     }
-    const rawName = selection.hasSelection ? selection.name : "removed_background";
+    const rawName = (activeImageSource === "upload" && uploadedImage) ? uploadedImage.name : (selection.hasSelection ? selection.name : "removed_background");
     const cleanName = rawName.replace(/[/\\?%*:|"<>]/g, "-").trim() || "removed_background";
 
-    let downloadHref = previewUrl;
+    let downloadHref = currentUrl;
 
-    if (activePreset === "custom-image" && customBgUrl) {
-      try {
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        const bgImg = new Image();
-        const fgImg = new Image();
-        bgImg.crossOrigin = "anonymous";
-        fgImg.crossOrigin = "anonymous";
-        bgImg.src = customBgUrl;
-        fgImg.src = previewUrl;
-
-        await Promise.all([
-          new Promise((res, rej) => { bgImg.onload = res; bgImg.onerror = rej; }),
-          new Promise((res, rej) => { fgImg.onload = res; fgImg.onerror = rej; }),
-        ]);
-
-        canvas.width = fgImg.naturalWidth || 1024;
-        canvas.height = fgImg.naturalHeight || 1024;
-
-        if (ctx) {
-          ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
-          if (imgCssFilter && imgCssFilter !== "none") {
-            ctx.filter = imgCssFilter;
-          }
-          ctx.drawImage(fgImg, 0, 0, canvas.width, canvas.height);
-          downloadHref = canvas.toDataURL("image/png");
-        }
-      } catch {
-        downloadHref = previewUrl;
-      }
+    try {
+      const { dataUrl } = await compositeToolboxImage({
+        imageUrl: currentUrl,
+        preset: activePreset,
+        customBgUrl,
+        brightness,
+        contrast,
+        saturation,
+        opacity,
+        filterCss: namedFilterCss,
+      });
+      downloadHref = dataUrl;
+    } catch {
+      downloadHref = currentUrl;
     }
-    
+
     const link = document.createElement("a");
     link.href = downloadHref;
     link.download = `${cleanName}.png`;
@@ -440,10 +648,13 @@ export function ToolboxScreen({
 
         {/* ── Editor Canvas ──────────────────────────────────── */}
         <div className="toolbox-preview" onDoubleClick={handlePreviewDoubleClick}>
-          {previewUrl ? (
+          {currentUrl ? (
             <>
               {/* Background layer */}
-              <div className="toolbox-preview-bg" style={getPreviewBgStyle(activePreset, customBgUrl)} />
+              <div
+                className="toolbox-preview-bg"
+                style={getPreviewBgStyle(activePreview === "original" ? "transparent" : activePreset, customBgUrl)}
+              />
 
               {/* Image layer — drag-to-pan when zoom > 100 */}
               <div
@@ -456,13 +667,18 @@ export function ToolboxScreen({
               >
                 <img
                   ref={imgRef}
-                  src={activePreview === "original"
-                    ? (effectiveOriginalUrl ?? previewUrl)
-                    : previewUrl}
+                  src={(activePreview === "original"
+                    ? (effectiveOriginalUrl ?? currentUrl)
+                    : currentUrl) || undefined}
                   alt="Preview"
                   crossOrigin="anonymous"
                   draggable={false}
                   onLoad={e => runExtract(e.currentTarget)}
+                  onError={() => {
+                    if (activePreview === "original") {
+                      setActivePreview("result");
+                    }
+                  }}
                   style={{
                     // Fill the full container — object-fit:contain letterboxes
                     // with background showing through, no black 10%/20% margins
@@ -474,9 +690,9 @@ export function ToolboxScreen({
                     // Pan first (screen-space), then scale from centre
                     transform: `translate(${clampedPan.x}px, ${clampedPan.y}px) scale(${zoom / 100})`,
                     transformOrigin: "center center",
-                    // Disable transition while dragging for instant response
-                    transition: isDragging ? "none" : "transform 0.2s, filter 0.2s",
-                    filter: activePreview === "result" ? imgCssFilter : "none",
+                    transition: isDragging ? "none" : "transform 0.2s, filter 0.1s, opacity 0.1s",
+                    filter: activePreview === "result" ? combinedImgFilter : "none",
+                    opacity: activePreview === "result" ? cssOpacity : 1,
                   }}
                 />
               </div>
@@ -490,9 +706,29 @@ export function ToolboxScreen({
               )}
 
               {/* Status tag — top-left */}
-              <div className="toolbox-preview-status">
-                <CheckCircle2 size={13} className="toolbox-status-icon" />
-                <span>Background Removed</span>
+              <div
+                className="toolbox-preview-status"
+                style={
+                  activePreview === "original" || !hasTransparency
+                    ? {
+                        background: "#fffbeb",
+                        borderColor: "#fde68a",
+                        color: "#d97706",
+                      }
+                    : undefined
+                }
+              >
+                {activePreview === "result" && hasTransparency ? (
+                  <>
+                    <CheckCircle2 size={13} className="toolbox-status-icon" />
+                    <span>Background Removed</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle size={13} style={{ color: "#d97706" }} />
+                    <span>Original Image</span>
+                  </>
+                )}
               </div>
 
               {/* Before / After toggle — top-right */}
@@ -549,7 +785,7 @@ export function ToolboxScreen({
             <div className="toolbox-preview-empty">
               <ImageIcon size={28} color="var(--c-text-4)" />
               <span>Preview renders here</span>
-              {!selection.hasSelection && (
+              {activeImageSource === "canvas" && !selection.hasSelection && (
                 <span style={{ fontSize: "10px", color: "var(--c-text-4)" }}>Select a layer first</span>
               )}
             </div>
@@ -561,22 +797,65 @@ export function ToolboxScreen({
 
         {/* ── Tab Panes ─────────────────────────────────────── */}
         {activeTab === "background" && (
-          <BackgroundTab
-            activePreset={activePreset}
-            onSelectPreset={handlePresetClick}
-            activeColor={activeColor}
-            onSelectColor={handleColorClick}
-            colors={colors}
-            onRefreshColors={handleRefreshColors}
-            notify={notify}
-            customBgUrl={customBgUrl}
-            onCustomImageSelected={(url, bytes) => {
-              setCustomBgUrl(url);
-              setCustomBgBytes(bytes);
-              setActivePreset("custom-image");
-              setActiveColor(null);
-            }}
-          />
+          <div style={{ position: "relative" }}>
+            {!hasTransparency && !!currentUrl && (
+              <div className="toolbox-unlock-bg-wrap">
+                <button
+                  type="button"
+                  disabled={isRemovingBg}
+                  onClick={handleRemoveBgInToolbox}
+                  className="toolbox-unlock-bg-btn"
+                >
+                  {isRemovingBg ? (
+                    <>
+                      <Loader size={16} className="toolbox-applying-spinner" />
+                      <span>Removing Background…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={16} />
+                      <span>Remove Background (1 Credit)</span>
+                    </>
+                  )}
+                </button>
+
+                <div className="toolbox-unlock-bg-hint">
+                  <AlertCircle size={14} style={{ color: "var(--brand, #6c47ff)", flexShrink: 0 }} />
+                  <span>Remove the existing background first to unlock backdrops and colors.</span>
+                </div>
+              </div>
+            )}
+
+            <div
+              style={
+                !hasTransparency && !!currentUrl
+                  ? {
+                      opacity: 0.45,
+                      pointerEvents: "none",
+                      userSelect: "none",
+                      filter: "grayscale(30%)",
+                    }
+                  : undefined
+              }
+            >
+              <BackgroundTab
+                activePreset={activePreset}
+                onSelectPreset={handlePresetClick}
+                activeColor={activeColor}
+                onSelectColor={handleColorClick}
+                colors={colors}
+                onRefreshColors={handleRefreshColors}
+                notify={notify}
+                customBgUrl={customBgUrl}
+                onCustomImageSelected={(url, bytes) => {
+                  setCustomBgUrl(url);
+                  setCustomBgBytes(bytes);
+                  setActivePreset("custom-image");
+                  setActiveColor(null);
+                }}
+              />
+            </div>
+          </div>
         )}
 
         {activeTab === "adjust" && (
@@ -591,17 +870,17 @@ export function ToolboxScreen({
             setContrast={setContrast}
             onReset={() => {
               setOpacity(100);
-              setBrightness(60);
-              setSaturation(80);
-              setContrast(45);
+              setBrightness(50);
+              setSaturation(50);
+              setContrast(50);
             }}
           />
         )}
 
         {activeTab === "size" && (
           <SizeTab
-            currentWidth={selection.hasSelection ? selection.width : 1024}
-            currentHeight={selection.hasSelection ? selection.height : 1024}
+            currentWidth={selection.hasSelection ? selection.width : (uploadedImage?.width || 1024)}
+            currentHeight={selection.hasSelection ? selection.height : (uploadedImage?.height || 1024)}
             onResize={onResize}
             notify={notify}
           />
@@ -609,8 +888,8 @@ export function ToolboxScreen({
 
         {activeTab === "info" && (
           <InfoTab
-            width={selection.hasSelection ? selection.width : 1024}
-            height={selection.hasSelection ? selection.height : 1024}
+            width={selection.hasSelection ? selection.width : (uploadedImage?.width || 1024)}
+            height={selection.hasSelection ? selection.height : (uploadedImage?.height || 1024)}
             fileSize={fileSizeStr}
             format={imageFormat || "PNG"}
             creditsRemaining={creditsRemaining}
@@ -656,7 +935,7 @@ export function ToolboxScreen({
               type="button"
               className="btn-download"
               onClick={handleInstatDownlod}
-              disabled={!previewUrl}
+              disabled={!currentUrl}
               title="Download transparent image"
             >
               <Download size={14} />
@@ -677,7 +956,7 @@ export function ToolboxScreen({
               ) : (
                 <>
                   <Sparkles size={14} />
-                  <span>Apply to Figma</span>
+                  <span>{selection.hasSelection ? "Apply to Figma" : "Insert to Figma"}</span>
                 </>
               )}
             </button>
@@ -689,9 +968,10 @@ export function ToolboxScreen({
       <ImageViewerModal
         isOpen={isFullViewOpen}
         onClose={() => setIsFullViewOpen(false)}
-        imageUrl={activePreview === "original" ? (effectiveOriginalUrl ?? previewUrl) : previewUrl}
+        imageUrl={activePreview === "original" ? (effectiveOriginalUrl ?? currentUrl) : currentUrl}
         bgStyle={getPreviewBgStyle(activePreset, customBgUrl)}
-        filterCss={activePreview === "result" ? imgCssFilter : "none"}
+        filterCss={activePreview === "result" ? combinedImgFilter : "none"}
+        opacity={activePreview === "result" ? cssOpacity : 1}
         onDownload={handleInstatDownlod}
       />
     </>

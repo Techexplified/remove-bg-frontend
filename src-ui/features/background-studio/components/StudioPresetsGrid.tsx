@@ -6,6 +6,7 @@ interface Props {
   selectedPresetId: string | null;
   foregroundPreviewUrl: string | null;
   onSelectPreset: (preset: BackgroundPreset) => void;
+  disabled?: boolean;
 }
 
 export function StudioPresetsGrid({
@@ -13,6 +14,7 @@ export function StudioPresetsGrid({
   selectedPresetId,
   foregroundPreviewUrl,
   onSelectPreset,
+  disabled = false,
 }: Props) {
   return (
     <div className="presets-tray-section">
@@ -21,8 +23,8 @@ export function StudioPresetsGrid({
         <span className="presets-view-all-link">{presets.length} presets</span>
       </div>
 
-      {/* ── 2 rows × 4 columns Grid ── */}
-      <div className="presets-grid-2x4">
+      {/* ── 2 rows × 4 columns Grid (disabled when background not removed) ── */}
+      <div className={`presets-grid-2x4 ${disabled ? "presets-grid-disabled" : ""}`}>
         {presets.map((p) => {
           const isSelected = selectedPresetId === p.id;
           const bgCss = p.colors
@@ -33,7 +35,7 @@ export function StudioPresetsGrid({
             <div
               key={p.id}
               className={`preset-tile-card ${isSelected ? "active" : ""}`}
-              onClick={() => onSelectPreset(p)}
+              onClick={disabled ? undefined : () => onSelectPreset(p)}
             >
               <div
                 className="preset-tile-thumb"
@@ -64,13 +66,17 @@ export function StudioPresetsGrid({
         })}
       </div>
 
-      {/* ── "Looks great! 🔥" Callout Banner ── */}
-      <div className="looks-great-banner">
-        <Sparkles size={18} className="banner-sparkle-icon" />
+      {/* ── Callout Banner ── */}
+      <div className="looks-great-banner" style={disabled ? { opacity: 0.75, background: "#f8fafc", borderColor: "#e2e8f0" } : undefined}>
+        <Sparkles size={18} className="banner-sparkle-icon" style={disabled ? { color: "#94a3b8" } : undefined} />
         <div className="banner-text-wrap">
-          <span className="banner-title">Looks great! 🔥</span>
+          <span className="banner-title" style={disabled ? { color: "#64748b" } : undefined}>
+            {disabled ? "Background presets available after cutout" : "Looks great! 🔥"}
+          </span>
           <span className="banner-subtitle">
-            You can now apply this background to your image.
+            {disabled
+              ? "Once the background is removed, you can apply preset backdrops to your image."
+              : "You can now apply this background to your image."}
           </span>
         </div>
       </div>

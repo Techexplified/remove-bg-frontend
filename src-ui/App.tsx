@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Provider } from "react-redux";
 import { store } from "./app/store";
 import { useAppDispatch, useAppSelector } from "./app/hooks";
-import { setProcessing, addToast, openModal, setLastRun, setCheckoutOverlay, incrementUseCount } from "./app/slices/uiSlice";
+import { setProcessing, addToast, openModal, setLastRun, setCheckoutOverlay, incrementUseCount, setSection } from "./app/slices/uiSlice";
 import { CheckoutOverlay } from "./shared/components/CheckoutOverlay";
 import { ProcessingOverlay } from "./shared/components/ProcessingOverlay";
 import { ToastStack } from "./shared/components/toasts/ToastStack";
@@ -13,6 +13,7 @@ import { PromptModal } from "./shared/components/modals/PromptModal";
 import { FeatureOptionsModal } from "./shared/components/modals/FeatureOptionsModal";
 import { ComingSoonModal } from "./shared/components/modals/ComingSoonModal";
 import { FeaturePreviewModal } from "./shared/components/modals/FeaturePreviewModal";
+import { BgStudioGatewayModal } from "./shared/components/modals/BgStudioGatewayModal";
 import { FeaturesScreen } from "./features/features-screen/FeaturesScreen";
 import { ToolboxScreen } from "./features/toolbox/ToolboxScreen";
 import { SettingsScreen } from "./features/settings/SettingsScreen";
@@ -24,11 +25,11 @@ import { ReviewPrompt } from "./shared/components/feedback/ReviewPrompt";
 import { PluginBridgeProvider, usePluginBridgeContext } from "./shared/context/PluginBridgeContext";
 import { useCheckoutWatcher } from "./shared/hooks/useCheckoutWatcher";
 import { loadPlanStatus, deductCredits } from "./app/slices/statusSlice";
-import { setOriginalUrl } from "./app/slices/figmaSlice";
+import { setOriginalUrl, setPreviewUrl, setUploadedImage } from "./app/slices/figmaSlice";
 import { runFeature, resetSession, ApiError } from "./shared/api/client";
 import { removeBackgroundLocal } from "./shared/utils/fallbackRemoval";
-import { isFeatureUnlocked, ALL_FEATURES } from "./shared/types/featureData";
-import type { FeatureDef } from "./shared/types/features";
+import { isFeatureUnlocked, ALL_FEATURES, PRIMARY_FEATURE } from "./shared/types/featureData";
+import type { FeatureDef, SectionId } from "./shared/types/features";
 import type { FeatureId } from "./shared/types/api";
 
 // ── Loading screen shown while waiting for figma bridge to send user identity ──
@@ -72,7 +73,7 @@ function AppReady() {
   const activeSection = useAppSelector(s => s.ui.activeSection);
   const modal = useAppSelector(s => s.ui.modal);
   const lastRunOptions = useAppSelector(s => s.ui.lastRunOptions);
-  const selection = useAppSelector(s => s.figma.selection);
+  const { selection, uploadedImage, activeImageSource } = useAppSelector(s => s.figma);
 
   // AppReady is only mounted once hasReceivedUserId=true, so window.__figmaUserId
   // is already set by the time any of this fires.
@@ -105,7 +106,8 @@ function AppReady() {
   const executeFeature = useCallback(async (
     feature: FeatureDef,
     opts: Record<string, string | undefined> = {},
-    localBytes?: Uint8Array
+    localBytes?: Uint8Array,
+    targetSection?: SectionId
   ) => {
     if (!status) return;
     lastFeatureRef.current = feature;
@@ -123,7 +125,10 @@ function AppReady() {
         if (imageBytes) {
           lastInputBytesRef.current = imageBytes;
           const blob = new Blob([imageBytes as unknown as BlobPart], { type: "image/png" });
-          dispatch(setOriginalUrl(URL.createObjectURL(blob)));
+          const blobUrl = URL.createObjectURL(blob);
+          if (!localBytes) {
+            dispatch(setOriginalUrl(blobUrl));
+          }
         }
       }
       let result: Uint8Array;
@@ -182,15 +187,34 @@ function AppReady() {
       }
 
       bridge.insertResultImage(result);
-      dispatch(setProcessing({
-        stage: "success",
-        featureLabel: feature.label,
-        originalSize,
-        originalSub,
-        targetSize,
-        targetSub,
-        extraBullets,
-      }));
+      const resultBlob = new Blob([result as unknown as BlobPart], { type: "image/png" });
+      const resultUrl = URL.createObjectURL(resultBlob);
+      dispatch(setPreviewUrl(resultUrl));
+
+      if (uploadedImage && localBytes) {
+        dispatch(setUploadedImage({
+          ...uploadedImage,
+          previewUrl: resultUrl,
+          bytes: result,
+          originalPreviewUrl: uploadedImage.originalPreviewUrl || uploadedImage.previewUrl,
+          originalBytes: uploadedImage.originalBytes || uploadedImage.bytes,
+        }));
+      }
+
+      if (targetSection) {
+        dispatch(setProcessing({ stage: "idle" }));
+        dispatch(setSection(targetSection));
+      } else {
+        dispatch(setProcessing({
+          stage: "success",
+          featureLabel: feature.label,
+          originalSize,
+          originalSub,
+          targetSize,
+          targetSub,
+          extraBullets,
+        }));
+      }
 
       // Increment successful feature use count (for 3rd-use review prompt)
       dispatch(incrementUseCount());
@@ -260,8 +284,9 @@ function AppReady() {
       dispatch(openModal({ kind: "plan_picker" }));
       return;
     }
+    const effectiveBytes = localBytes ?? ((activeImageSource === "upload" && uploadedImage) ? uploadedImage.bytes : undefined);
     // If using locally uploaded image, skip canvas selection checks
-    if (!localBytes) {
+    if (!effectiveBytes) {
       const selCount = selection.hasSelection ? selection.count : 0;
       if (feature.needsInputImage && (!selection.hasSelection || selCount > 1)) {
         toast("error", selCount > 1 ? "Multiple layers selected" : "No layer selected",
@@ -291,7 +316,7 @@ function AppReady() {
         });
       return;
     }
-    void executeFeature(feature, {}, localBytes);
+    void executeFeature(feature, {}, effectiveBytes);
   }
 
   function handlePromptSubmit(featureId: FeatureId, prompt: string) {
@@ -341,6 +366,35 @@ function AppReady() {
     }
   };
 
+  const handleRemoveBgAndOpenStudio = useCallback(async () => {
+    if (spendable < 1) {
+      toast("warning", "Out of credits", "You need 1 credit to remove background.", {
+        label: status?.plan === "free" ? "Upgrade Plan" : "+ Top Up Credits",
+        action: status?.plan === "free" ? "manage_plan" : "topup",
+      });
+      return;
+    }
+    const bytes = (activeImageSource === "upload" && uploadedImage) ? uploadedImage.bytes : undefined;
+    await executeFeature(PRIMARY_FEATURE, {}, bytes, "background_studio");
+  }, [activeImageSource, uploadedImage, executeFeature, spendable, status, toast]);
+
+  const handleQuickRemoveBg = useCallback(async (targetSection: SectionId = "toolbox"): Promise<boolean> => {
+    if (spendable < 1) {
+      toast("warning", "Out of credits", "You need 1 credit to remove background.", {
+        label: status?.plan === "free" ? "Upgrade Plan" : "+ Top Up Credits",
+        action: status?.plan === "free" ? "manage_plan" : "topup",
+      });
+      return false;
+    }
+    const bytes = (activeImageSource === "upload" && uploadedImage) ? uploadedImage.bytes : undefined;
+    try {
+      await executeFeature(PRIMARY_FEATURE, {}, bytes, targetSection);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [activeImageSource, uploadedImage, executeFeature, spendable, status, toast]);
+
   return (
     <>
       <AnimatePresence mode="wait">
@@ -369,12 +423,17 @@ function AppReady() {
               exportNode={bridge.exportNode}
               insertResultImage={bridge.insertResultImage}
               notify={bridge.notify}
+              onRemoveBackground={handleQuickRemoveBg}
             />
           )}
           {activeSection === "settings" && <SettingsScreen />}
           {activeSection === "batch" && <BatchProcessScreen />}
           {activeSection === "resize_export" && <ResizeExportScreen />}
-          {activeSection === "background_studio" && <BackgroundStudioScreen />}
+          {activeSection === "background_studio" && (
+            <BackgroundStudioScreen
+              onRemoveBackground={() => handleQuickRemoveBg("background_studio")}
+            />
+          )}
         </motion.div>
       </AnimatePresence>
 
@@ -396,6 +455,9 @@ function AppReady() {
       {modal.kind === "options" && <FeatureOptionsModal onSubmit={handleOptionsSubmit} />}
       {modal.kind === "coming_soon" && <ComingSoonModal />}
       {modal.kind === "feature_preview" && <FeaturePreviewModal />}
+      {modal.kind === "bg_studio_gateway" && (
+        <BgStudioGatewayModal onConfirm={handleRemoveBgAndOpenStudio} />
+      )}
     </>
   );
 }

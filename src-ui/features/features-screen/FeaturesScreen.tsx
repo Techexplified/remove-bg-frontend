@@ -1,11 +1,13 @@
-import { useRef, useState, useCallback } from "react";
-import { Sparkles, Crop, Palette, FileOutput, Layers, Sun, Lightbulb, ZoomIn, Wand2, PenTool, Copy, Scissors, SlidersHorizontal, Settings, Upload } from "lucide-react";
+import { useRef, useCallback } from "react";
+import { Sparkles, Crop, Palette, FileOutput, Layers, Sun, Lightbulb, ZoomIn, Wand2, PenTool, Copy, Scissors, SlidersHorizontal, Settings, Upload, X } from "lucide-react";
 import type { LucideProps } from "lucide-react";
 import type { FC } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { setSection, addToast } from "../../app/slices/uiSlice";
+import { setUploadedImage, setActiveImageSource, clearUploadedImage } from "../../app/slices/figmaSlice";
 import { IMAGE_STUDIO_FEATURES, PLAN_LIMITS } from "../../shared/types/featureData";
 import type { FeatureDef } from "../../shared/types/features";
+import { usePluginBridgeContext } from "../../shared/context/PluginBridgeContext";
 
 export interface Props {
   onRunFeature: (f: FeatureDef, localBytes?: Uint8Array) => void;
@@ -34,14 +36,13 @@ function readFileBytes(file: File): Promise<Uint8Array> {
   });
 }
 
-type ImageSource = "canvas" | "local";
-
 const PRO_LOCKED_FEATURES = new Set(["background_studio", "resize_export"]);
 
 export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
   const dispatch = useAppDispatch();
+  const bridge = usePluginBridgeContext();
   const status = useAppSelector(s => s.status.data);
-  const selection = useAppSelector(s => s.figma.selection);
+  const { selection, previewUrl, uploadedImage, activeImageSource } = useAppSelector(s => s.figma);
   const plan = status?.plan ?? "free";
   const isPaid = !!status && status.plan !== "free";
   const spendable = !status ? 0 : (status.credits + (plan === "pro" ? status.topupCreditsPro : status.topupCreditsStarter));
@@ -53,9 +54,6 @@ export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
   const isZeroCredits = !!status && !isPaid && spendable <= 0;
   const isStatusLoading = status === null;
 
-  // ── Local image upload state ──
-  const [imageSource, setImageSource] = useState<ImageSource>("canvas");
-  const [localFile, setLocalFile] = useState<{ name: string; previewUrl: string; bytes: Uint8Array } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = useCallback(async (file: File) => {
@@ -63,12 +61,30 @@ export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
       return; // Only PNG/JPEG/WebP
     }
     const bytes = await readFileBytes(file);
-    const previewUrl = URL.createObjectURL(file);
-    // Revoke old preview
-    if (localFile) URL.revokeObjectURL(localFile.previewUrl);
-    setLocalFile({ name: file.name, previewUrl, bytes });
-    setImageSource("local");
-  }, [localFile]);
+    const blobUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      dispatch(setUploadedImage({
+        name: file.name,
+        previewUrl: blobUrl,
+        bytes,
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+        originalPreviewUrl: blobUrl,
+        originalBytes: bytes,
+      }));
+    };
+    img.onerror = () => {
+      dispatch(setUploadedImage({
+        name: file.name,
+        previewUrl: blobUrl,
+        bytes,
+        originalPreviewUrl: blobUrl,
+        originalBytes: bytes,
+      }));
+    };
+    img.src = blobUrl;
+  }, [dispatch]);
 
   // Drag events
   function onDragOver(e: React.DragEvent) { e.preventDefault(); }
@@ -104,7 +120,7 @@ export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
       dispatch(setSection("resize_export"));
       return;
     }
-    const bytes = imageSource === "local" && localFile ? localFile.bytes : undefined;
+    const bytes = activeImageSource === "upload" && uploadedImage ? uploadedImage.bytes : undefined;
     onRunFeature(f, bytes);
   }
 
@@ -137,37 +153,213 @@ export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
         {/* ── Image Dropzone Container ── */}
         <div
           className="selection-box"
+          style={{
+            cursor: activeImageSource === "upload" && !uploadedImage ? "pointer" : "default",
+            padding: "16px 14px",
+          }}
           onDragOver={onDragOver}
           onDragLeave={onDragLeave}
           onDrop={onDrop}
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => {
+            if (activeImageSource === "upload" && !uploadedImage) {
+              fileInputRef.current?.click();
+            }
+          }}
         >
-          <Upload size={24} color="var(--brand)" style={{ margin: "0 auto 8px", display: "block" }} />
-          <div className="selection-hint">
-            {localFile ? localFile.name : selection.hasSelection ? selection.name : "Drop image here"}
-            <small>or click to browse</small>
-          </div>
+          {/* Active Image Preview or Empty Placeholder */}
+          {activeImageSource === "upload" ? (
+            uploadedImage ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", textAlign: "left" }}>
+                <img
+                  src={uploadedImage.previewUrl}
+                  alt={uploadedImage.name}
+                  style={{
+                    width: "56px",
+                    height: "56px",
+                    borderRadius: "10px",
+                    objectFit: "contain",
+                    background: "repeating-conic-gradient(#f1f5f9 0% 25%, #ffffff 0% 50%) 50% / 10px 10px",
+                    border: "1px solid var(--c-border)",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+                    flexShrink: 0,
+                  }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: "12.5px",
+                    fontWeight: "700",
+                    color: "var(--c-text)",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}>
+                    {uploadedImage.name}
+                  </div>
+                  <div style={{ fontSize: "10.5px", color: "var(--brand)", fontWeight: "600", marginTop: "3px" }}>
+                    {uploadedImage.width && uploadedImage.height ? `${uploadedImage.width}×${uploadedImage.height} px · ` : ""}
+                    Uploaded File
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
+                    style={{
+                      padding: "5px 9px",
+                      fontSize: "10.5px",
+                      fontWeight: "700",
+                      borderRadius: "7px",
+                      border: "1px solid var(--c-border)",
+                      background: "var(--c-bg-2)",
+                      color: "var(--c-text-2)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Change
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      dispatch(clearUploadedImage());
+                    }}
+                    style={{
+                      width: "26px",
+                      height: "26px",
+                      borderRadius: "50%",
+                      border: "none",
+                      background: "rgba(0,0,0,0.06)",
+                      color: "var(--c-text-3)",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                    title="Remove uploaded image"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ cursor: "pointer" }} onClick={() => fileInputRef.current?.click()}>
+                <Upload size={24} color="var(--brand)" style={{ margin: "0 auto 8px", display: "block" }} />
+                <div className="selection-hint">
+                  Drop image here
+                  <small>or click to browse from computer</small>
+                </div>
+              </div>
+            )
+          ) : (
+            /* Canvas Source */
+            selection.hasSelection ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", textAlign: "left" }}>
+                {previewUrl ? (
+                  <img
+                    src={previewUrl}
+                    alt={selection.name}
+                    style={{
+                      width: "56px",
+                      height: "56px",
+                      borderRadius: "10px",
+                      objectFit: "contain",
+                      background: "repeating-conic-gradient(#f1f5f9 0% 25%, #ffffff 0% 50%) 50% / 10px 10px",
+                      border: "1px solid var(--c-border)",
+                      boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+                      flexShrink: 0,
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: "56px",
+                    height: "56px",
+                    borderRadius: "10px",
+                    background: "rgba(108, 71, 255, 0.08)",
+                    border: "1px solid rgba(108, 71, 255, 0.2)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--brand)",
+                    flexShrink: 0,
+                  }}>
+                    <Layers size={22} />
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: "12.5px",
+                    fontWeight: "700",
+                    color: "var(--c-text)",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}>
+                    {selection.name}
+                  </div>
+                  <div style={{ fontSize: "10.5px", color: "var(--brand)", fontWeight: "600", marginTop: "3px" }}>
+                    {selection.width} × {selection.height} px · Canvas Selection
+                  </div>
+                </div>
+                <span style={{
+                  fontSize: "9px",
+                  fontWeight: "700",
+                  padding: "3px 8px",
+                  borderRadius: "100px",
+                  background: "rgba(22, 163, 74, 0.12)",
+                  color: "#16a34a",
+                  border: "1px solid rgba(22, 163, 74, 0.2)",
+                  flexShrink: 0,
+                }}>
+                  ● Selected
+                </span>
+              </div>
+            ) : (
+              <div>
+                <Layers size={24} color="var(--brand)" style={{ margin: "0 auto 8px", display: "block" }} />
+                <div className="selection-hint">
+                  No layer selected
+                  <small>Select an image on the Figma canvas</small>
+                </div>
+              </div>
+            )
+          )}
+
           {/* Source toggle pills */}
-          <div style={{ display: "flex", gap: "6px", justifyContent: "center", marginTop: "12px" }} onClick={e => e.stopPropagation()}>
+          <div style={{ display: "flex", gap: "6px", justifyContent: "center", marginTop: "14px", paddingTop: "10px", borderTop: "1px solid rgba(0,0,0,0.05)" }} onClick={e => e.stopPropagation()}>
             <button
-              onClick={() => setImageSource("canvas")}
+              type="button"
+              onClick={() => {
+                dispatch(setActiveImageSource("canvas"));
+                bridge.requestSelection();
+              }}
               style={{
-                padding: "4px 10px", borderRadius: "100px", fontSize: "10px", fontWeight: "700",
-                border: imageSource === "canvas" ? "1px solid var(--brand)" : "1px solid var(--c-border)",
-                background: imageSource === "canvas" ? "rgba(0,245,155,.15)" : "var(--c-bg-2)",
-                color: imageSource === "canvas" ? "var(--brand)" : "var(--c-text-3)",
+                padding: "4px 12px", borderRadius: "100px", fontSize: "10.5px", fontWeight: "700",
+                border: activeImageSource === "canvas" ? "1.5px solid var(--brand)" : "1px solid var(--c-border)",
+                background: activeImageSource === "canvas" ? "rgba(108, 71, 255, 0.12)" : "var(--c-bg-2)",
+                color: activeImageSource === "canvas" ? "var(--brand)" : "var(--c-text-3)",
                 cursor: "pointer",
+                transition: "all 0.15s ease",
               }}>
               From Canvas
             </button>
             <button
-              onClick={() => { setImageSource("local"); if (!localFile) fileInputRef.current?.click(); }}
+              type="button"
+              onClick={() => {
+                dispatch(setActiveImageSource("upload"));
+                if (!uploadedImage) {
+                  fileInputRef.current?.click();
+                }
+              }}
               style={{
-                padding: "4px 10px", borderRadius: "100px", fontSize: "10px", fontWeight: "700",
-                border: imageSource === "local" ? "1px solid var(--brand)" : "1px solid var(--c-border)",
-                background: imageSource === "local" ? "rgba(0,245,155,.15)" : "var(--c-bg-2)",
-                color: imageSource === "local" ? "var(--brand)" : "var(--c-text-3)",
+                padding: "4px 12px", borderRadius: "100px", fontSize: "10.5px", fontWeight: "700",
+                border: activeImageSource === "upload" ? "1.5px solid var(--brand)" : "1px solid var(--c-border)",
+                background: activeImageSource === "upload" ? "rgba(108, 71, 255, 0.12)" : "var(--c-bg-2)",
+                color: activeImageSource === "upload" ? "var(--brand)" : "var(--c-text-3)",
                 cursor: "pointer",
+                transition: "all 0.15s ease",
               }}>
               Upload File
             </button>
@@ -180,7 +372,11 @@ export function FeaturesScreen({ onRunFeature, onManagePlan }: Props) {
           type="file"
           accept="image/png,image/jpeg,image/webp"
           style={{ display: "none" }}
-          onChange={async e => { const f = e.target.files?.[0]; if (f) await handleFileSelect(f); e.target.value = ""; }}
+          onChange={async e => {
+            const f = e.target.files?.[0];
+            if (f) await handleFileSelect(f);
+            e.target.value = "";
+          }}
         />
 
         {/* ── Remaining Credits Card ── */}

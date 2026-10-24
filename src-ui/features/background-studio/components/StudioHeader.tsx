@@ -1,4 +1,4 @@
-import { ArrowLeft, Sparkles, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, Palette, MoreHorizontal } from "lucide-react";
 
 interface Props {
   onBack: () => void;
@@ -13,7 +13,7 @@ export function StudioHeader({ onBack }: Props) {
         </button>
 
         <div className="studio-logo-badge">
-          <Sparkles size={16} />
+          <Palette size={16} />
         </div>
 
         <div className="studio-header-titles">

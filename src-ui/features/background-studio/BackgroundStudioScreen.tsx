@@ -10,6 +10,7 @@ import { StudioFooter } from "./components/StudioFooter";
 import { BACKGROUND_PRESETS } from "./data/studioPresets";
 import { getRecentBackgrounds, saveRecentBackground } from "./utils/recentHistory";
 import { compositeBackground } from "./utils/backgroundCompositor";
+import { checkImageHasTransparency, detectTransparencyFromUrl } from "../../shared/utils/transparency";
 import type {
   BackgroundTab,
   GradientConfig,
@@ -36,15 +37,21 @@ const DEFAULT_SHADOW: StudioShadow = {
   offsetY: 10,
 };
 
-export function BackgroundStudioScreen() {
+interface Props {
+  onRemoveBackground?: () => Promise<boolean>;
+}
+
+export function BackgroundStudioScreen({ onRemoveBackground }: Props) {
   const dispatch = useAppDispatch();
   const bridge = usePluginBridgeContext();
-  const selection = useAppSelector((s) => s.figma.selection);
+  const { selection, uploadedImage, activeImageSource } = useAppSelector((s) => s.figma);
 
   // ── Source Foreground Image State ──
   const [foregroundImg, setForegroundImg] = useState<HTMLImageElement | null>(null);
   const [foregroundUrl, setForegroundUrl] = useState<string | null>(null);
   const foregroundBlobUrlRef = useRef<string | null>(null);
+  const [hasTransparency, setHasTransparency] = useState<boolean>(true);
+  const [isRemovingBg, setIsRemovingBg] = useState<boolean>(false);
 
   // ── Active Background Styling State ──
   const [activeTab, setActiveTab] = useState<BackgroundTab>("color");
@@ -79,8 +86,7 @@ export function BackgroundStudioScreen() {
 
   // ── Auto-resize window for Studio layout on mount ──
   useEffect(() => {
-    bridge.resizeWindow(680, 740);
-    bridge.requestSelection();
+    bridge.resizeWindow(700, 780);
     setRecentItems(getRecentBackgrounds());
 
     return () => {
@@ -90,36 +96,74 @@ export function BackgroundStudioScreen() {
     };
   }, [bridge]);
 
-  // ── Load selected canvas image ──
+  // ── Load selected canvas or uploaded image ──
   useEffect(() => {
-    if (!selection.hasSelection) return;
-
-    let isMounted = true;
-    (async () => {
-      try {
-        const bytes = await bridge.exportSelectedImage();
-        if (bytes && bytes.length > 0 && isMounted) {
-          if (foregroundBlobUrlRef.current) URL.revokeObjectURL(foregroundBlobUrlRef.current);
-          const blob = new Blob([bytes as unknown as BlobPart], { type: "image/png" });
-          const url = URL.createObjectURL(blob);
-          foregroundBlobUrlRef.current = url;
-          setForegroundUrl(url);
-
-          const img = new Image();
-          img.onload = () => {
-            if (isMounted) setForegroundImg(img);
-          };
-          img.src = url;
-        }
-      } catch (err) {
-        console.warn("Failed to export selection for Background Studio", err);
+    if (activeImageSource === "upload" && uploadedImage) {
+      setForegroundUrl(uploadedImage.previewUrl);
+      const img = new Image();
+      const applyImg = () => {
+        setForegroundImg(img);
+      };
+      img.onload = applyImg;
+      img.src = uploadedImage.previewUrl;
+      if (img.complete && img.naturalWidth > 0) {
+        applyImg();
       }
-    })();
+      return;
+    }
 
-    return () => {
-      isMounted = false;
-    };
-  }, [selection.hasSelection, selection.hasSelection ? `${selection.id}:${selection.width}x${selection.height}` : "", bridge]);
+    if (activeImageSource === "canvas" && selection.hasSelection) {
+      let isMounted = true;
+      (async () => {
+        try {
+          const bytes = await bridge.exportSelectedImage();
+          if (bytes && bytes.length > 0 && isMounted) {
+            if (foregroundBlobUrlRef.current) URL.revokeObjectURL(foregroundBlobUrlRef.current);
+            const blob = new Blob([bytes as unknown as BlobPart], { type: "image/png" });
+            const url = URL.createObjectURL(blob);
+            foregroundBlobUrlRef.current = url;
+            setForegroundUrl(url);
+
+            const img = new Image();
+            img.onload = () => {
+              if (isMounted) setForegroundImg(img);
+            };
+            img.src = url;
+          }
+        } catch (err) {
+          console.warn("Failed to export selection for Background Studio", err);
+        }
+      })();
+
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    if (activeImageSource === "canvas" && !selection.hasSelection) {
+      setForegroundUrl(null);
+      setForegroundImg(null);
+      setCompositedPreviewUrl(null);
+    }
+  }, [activeImageSource, uploadedImage, selection.hasSelection, selection.hasSelection ? `${selection.id}:${selection.width}x${selection.height}` : "", bridge]);
+
+  // ── Detect transparency of source foreground ──
+  useEffect(() => {
+    if (foregroundImg) {
+      try {
+        const hasT = checkImageHasTransparency(foregroundImg);
+        setHasTransparency(hasT);
+      } catch {
+        setHasTransparency(true);
+      }
+    } else if (foregroundUrl) {
+      detectTransparencyFromUrl(foregroundUrl).then((hasT) => {
+        setHasTransparency(hasT);
+      });
+    } else {
+      setHasTransparency(true);
+    }
+  }, [foregroundImg, foregroundUrl]);
 
   // ── Re-composite on state change (Debounced) ──
   useEffect(() => {
@@ -229,6 +273,21 @@ export function BackgroundStudioScreen() {
     setEffectiveBgType("preset");
     setSelectedPresetId("ecommerce");
     setActivePreset(BACKGROUND_PRESETS[0]);
+  };
+
+  const handleRemoveBgInStudio = async () => {
+    if (!onRemoveBackground) return;
+    setIsRemovingBg(true);
+    try {
+      const ok = await onRemoveBackground();
+      if (ok) {
+        bridge.notify("Background removed successfully!");
+      }
+    } catch {
+      bridge.notify("Failed to remove background.");
+    } finally {
+      setIsRemovingBg(false);
+    }
   };
 
   const handleApplyToFigma = async () => {
@@ -351,6 +410,10 @@ export function BackgroundStudioScreen() {
           onFilterChange={(f) => {
             setFilter(f);
           }}
+          hasTransparency={hasTransparency}
+          hasImage={!!foregroundUrl}
+          isRemovingBg={isRemovingBg}
+          onRemoveBackground={handleRemoveBgInStudio}
         />
 
         <div className="studio-right-panel">
@@ -358,6 +421,7 @@ export function BackgroundStudioScreen() {
             originalCutoutUrl={foregroundUrl}
             compositedPreviewUrl={compositedPreviewUrl}
             isCompositing={isCompositing}
+            hasTransparency={hasTransparency}
           />
 
           <StudioPresetsGrid
@@ -365,6 +429,7 @@ export function BackgroundStudioScreen() {
             selectedPresetId={selectedPresetId}
             foregroundPreviewUrl={foregroundUrl}
             onSelectPreset={handleSelectPreset}
+            disabled={!hasTransparency && !!foregroundUrl}
           />
         </div>
       </main>

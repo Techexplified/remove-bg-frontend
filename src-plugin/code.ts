@@ -198,7 +198,20 @@ figma.ui.onmessage = async (msg: { type: string;[k: string]: unknown }) => {
         opacity?: number; backgroundPreset?: string; imageFilterPreset?: string;
         customBgBytes?: Uint8Array;
       };
-      const sel = figma.currentPage.selection.filter((n): n is SceneNode & MinimalFillsMixin => "fills" in n);
+      function getImageNodes(nodes: readonly SceneNode[]): (SceneNode & MinimalFillsMixin)[] {
+        const result: (SceneNode & MinimalFillsMixin)[] = [];
+        for (const n of nodes) {
+          if ("fills" in n && Array.isArray(n.fills) && n.fills.some(f => f.type === "IMAGE")) {
+            result.push(n as SceneNode & MinimalFillsMixin);
+          } else if ("children" in n) {
+            result.push(...getImageNodes((n as ChildrenMixin).children));
+          } else if ("fills" in n) {
+            result.push(n as SceneNode & MinimalFillsMixin);
+          }
+        }
+        return result;
+      }
+      const sel = getImageNodes(figma.currentPage.selection);
       for (const node of sel) {
         if ("opacity" in node && typeof opacity === "number") {
           node.opacity = opacity / 100;
@@ -292,6 +305,9 @@ figma.ui.onmessage = async (msg: { type: string;[k: string]: unknown }) => {
           } else if (backgroundPreset === "white") {
             if ("setPluginData" in node) node.setPluginData("removebg_bg_hash", "");
             node.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }, updatedFgFill];
+          } else if (backgroundPreset === "black") {
+            if ("setPluginData" in node) node.setPluginData("removebg_bg_hash", "");
+            node.fills = [{ type: "SOLID", color: { r: 0, g: 0, b: 0 } }, updatedFgFill];
           } else if (backgroundPreset === "sand") {
             if ("setPluginData" in node) node.setPluginData("removebg_bg_hash", "");
             node.fills = [{ type: "SOLID", color: { r: 245 / 255, g: 230 / 255, b: 211 / 255 } }, updatedFgFill];

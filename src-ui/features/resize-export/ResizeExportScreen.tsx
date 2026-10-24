@@ -71,8 +71,9 @@ export function ResizeExportScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const status = useAppSelector((s) => s.status.data);
   const isPaid = !!status && status.plan !== "free";
-  const selection = useAppSelector((s) => s.figma.selection);
+  const { selection, previewUrl: cachedPreviewUrl, uploadedImage, activeImageSource } = useAppSelector((s) => s.figma);
   const lastSelectionKeyRef = useRef<string>("");
+  const exportReqRef = useRef<number>(0);
   const blobUrlRef = useRef<string | null>(null);
 
   // Clean up ObjectURL on unmount
@@ -88,63 +89,107 @@ export function ResizeExportScreen() {
   // ── Auto-resize plugin window for 2-column studio layout on mount ──
   useEffect(() => {
     bridge.resizeWindow(680, 740);
-    bridge.requestSelection();
     return () => {
       bridge.resizeWindow(400, 700);
     };
   }, [bridge]);
 
-  // ── Auto-load & dynamically sync selected layer whenever selection changes on canvas ──
+  // ── Auto-load & dynamically sync source image (from Upload or Canvas) ──
   useEffect(() => {
-    if (!selection.hasSelection || isProcessing) return;
-    const key = `${selection.id || selection.name}:${selection.width}x${selection.height}:${selection.pixelCount}:${selection.count}`;
-    if (key === lastSelectionKeyRef.current) return;
-    lastSelectionKeyRef.current = key;
-
-    let isMounted = true;
-    (async () => {
-      try {
-        const bytes = await bridge.exportSelectedImage();
-        if (bytes && bytes.length > 0 && isMounted) {
-          setImageBytes(bytes);
-          if (blobUrlRef.current) {
-            URL.revokeObjectURL(blobUrlRef.current);
-          }
-          const blob = new Blob([bytes as unknown as BlobPart], { type: "image/png" });
-          const url = URL.createObjectURL(blob);
-          blobUrlRef.current = url;
-          setPreviewUrl(url);
-
-          // Read image native dimensions
-          const img = new Image();
-          img.onload = () => {
-            if (isMounted) {
-              const naturalW = img.naturalWidth || selection.width || 1080;
-              const naturalH = img.naturalHeight || selection.height || 1080;
-              setOriginalWidth(naturalW);
-              setOriginalHeight(naturalH);
-              setCustomDimensions((prev) => ({
-                ...prev,
-                width: naturalW,
-                height: naturalH,
-              }));
-              if (category === "custom") {
-                setTargetWidth(naturalW);
-                setTargetHeight(naturalH);
-              }
-            }
-          };
-          img.src = url;
+    if (activeImageSource === "upload" && uploadedImage) {
+      setImageBytes(uploadedImage.bytes);
+      setPreviewUrl(uploadedImage.previewUrl);
+      const img = new Image();
+      const applyDim = () => {
+        const naturalW = img.naturalWidth || uploadedImage.width || 1080;
+        const naturalH = img.naturalHeight || uploadedImage.height || 1080;
+        setOriginalWidth(naturalW);
+        setOriginalHeight(naturalH);
+        setCustomDimensions((prev) => ({
+          ...prev,
+          width: naturalW,
+          height: naturalH,
+        }));
+        if (category === "custom") {
+          setTargetWidth(naturalW);
+          setTargetHeight(naturalH);
         }
-      } catch {
-        // Selection wasn't exportable
+      };
+      img.onload = applyDim;
+      img.src = uploadedImage.previewUrl;
+      if (img.complete && img.naturalWidth > 0) {
+        applyDim();
       }
-    })();
+      return;
+    }
 
-    return () => {
-      isMounted = false;
-    };
-  }, [selection, bridge, category, isProcessing]);
+    if (activeImageSource === "canvas" && selection.hasSelection && !isProcessing) {
+      const key = `${selection.id || selection.name}:${selection.width}x${selection.height}:${selection.pixelCount}:${selection.count}`;
+      if (key === lastSelectionKeyRef.current && imageBytes) return;
+
+      // Use cached previewUrl immediately as instant visual feedback
+      if (cachedPreviewUrl && !previewUrl) {
+        setPreviewUrl(cachedPreviewUrl);
+        if (selection.width && selection.height) {
+          setOriginalWidth(selection.width);
+          setOriginalHeight(selection.height);
+          setCustomDimensions((prev) => ({
+            ...prev,
+            width: selection.width,
+            height: selection.height,
+          }));
+        }
+      }
+
+      const reqId = ++exportReqRef.current;
+      (async () => {
+        try {
+          const bytes = await bridge.exportSelectedImage();
+          if (bytes && bytes.length > 0 && reqId === exportReqRef.current) {
+            lastSelectionKeyRef.current = key;
+            setImageBytes(bytes);
+            if (blobUrlRef.current) {
+              URL.revokeObjectURL(blobUrlRef.current);
+            }
+            const blob = new Blob([bytes as unknown as BlobPart], { type: "image/png" });
+            const url = URL.createObjectURL(blob);
+            blobUrlRef.current = url;
+            setPreviewUrl(url);
+
+            // Read image native dimensions
+            const img = new Image();
+            img.onload = () => {
+              if (reqId === exportReqRef.current) {
+                const naturalW = img.naturalWidth || selection.width || 1080;
+                const naturalH = img.naturalHeight || selection.height || 1080;
+                setOriginalWidth(naturalW);
+                setOriginalHeight(naturalH);
+                setCustomDimensions((prev) => ({
+                  ...prev,
+                  width: naturalW,
+                  height: naturalH,
+                }));
+                if (category === "custom") {
+                  setTargetWidth(naturalW);
+                  setTargetHeight(naturalH);
+                }
+              }
+            };
+            img.src = url;
+          }
+        } catch {
+          // Selection wasn't exportable
+        }
+      })();
+      return;
+    }
+
+    if (activeImageSource === "canvas" && !selection.hasSelection) {
+      setImageBytes(null);
+      setPreviewUrl(null);
+      lastSelectionKeyRef.current = "";
+    }
+  }, [activeImageSource, uploadedImage, selection, isProcessing, bridge, cachedPreviewUrl]);
 
   // Handle local file upload fallback (commented out per design request; uncomment if needed)
   /*

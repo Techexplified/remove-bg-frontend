@@ -1,4 +1,4 @@
-import { ArrowLeft, Scissors, HelpCircle } from "lucide-react";
+import { ArrowLeft, Crop, HelpCircle } from "lucide-react";
 
 interface Props {
   onBack: () => void;
@@ -18,7 +18,7 @@ export function ResizeExportHeader({ onBack, onHelp }: Props) {
           <ArrowLeft size={16} />
         </button>
         <div className="re-header-icon-wrap">
-          <Scissors size={15} />
+          <Crop size={15} />
         </div>
         <div>
           <h2 className="re-header-title">Resize & Export</h2>

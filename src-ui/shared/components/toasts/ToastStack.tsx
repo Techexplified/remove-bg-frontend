@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { AlertCircle, CheckCircle, AlertTriangle, Info, Loader2, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
-import { removeToast, openModal, setSection } from "../../../app/slices/uiSlice";
+import { removeToast, openModal } from "../../../app/slices/uiSlice";
 
 interface Props {
   onRetry?: () => void;
@@ -37,9 +37,9 @@ export function ToastStack({ onRetry }: Props) {
 
   const handleCta = (action: string) => {
     if (action === "topup") {
-      dispatch(openModal({ kind: "coming_soon" }));
+      dispatch(openModal({ kind: "topup" }));
     } else if (action === "manage_plan") {
-      dispatch(setSection("account"));
+      dispatch(openModal({ kind: "plan_picker" }));
     } else if (action === "retry") {
       onRetry?.();
     }

@@ -5,12 +5,14 @@ interface Props {
   originalCutoutUrl: string | null;
   compositedPreviewUrl: string | null;
   isCompositing: boolean;
+  hasTransparency?: boolean;
 }
 
 export function StudioPreviewArea({
   originalCutoutUrl,
   compositedPreviewUrl,
   isCompositing,
+  hasTransparency = true,
 }: Props) {
   const [showBefore, setShowBefore] = useState(false);
 

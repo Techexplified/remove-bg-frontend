@@ -10,7 +10,7 @@
 
 import { createContext, useContext, useEffect, useRef, useCallback, type ReactNode } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
-import { setUserIdentity, setSelection, setPreviewUrl, setImageFormat } from "../../app/slices/figmaSlice";
+import { setUserIdentity, setSelection, setPreviewUrl, setOriginalUrl, setImageFormat } from "../../app/slices/figmaSlice";
 import { detectImageFormat } from "../utils/imageFormat";
 import { setPlanStatus } from "../../app/slices/statusSlice";
 import type { PluginToUIMessage, UIToPluginMessage, SelectionNodeRef } from "../types/messages";
@@ -108,6 +108,7 @@ export function PluginBridgeProvider({ children }: { children: ReactNode }) {
             dispatch(setImageFormat(format));
           } else {
             dispatch(setPreviewUrl(null));
+            dispatch(setOriginalUrl(null));
             dispatch(setImageFormat("PNG"));
           }
           break;

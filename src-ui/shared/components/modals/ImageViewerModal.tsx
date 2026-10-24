@@ -8,6 +8,7 @@ interface Props {
   imageUrl: string | null;
   bgStyle?: React.CSSProperties;
   filterCss?: string;
+  opacity?: number;
   onDownload?: () => void;
 }
 
@@ -17,6 +18,7 @@ export function ImageViewerModal({
   imageUrl,
   bgStyle,
   filterCss = "none",
+  opacity = 1,
   onDownload,
 }: Props) {
   // Close on Escape key press
@@ -132,6 +134,7 @@ export function ImageViewerModal({
                 objectFit: "contain",
                 display: "block",
                 filter: filterCss,
+                opacity,
                 userSelect: "none",
               }}
             />

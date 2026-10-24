@@ -10,6 +10,9 @@ import {
   Droplets,
   CircleDot,
   Contrast,
+  Sparkles,
+  AlertCircle,
+  Loader,
 } from "lucide-react";
 import type {
   BackgroundTab,
@@ -46,6 +49,12 @@ interface Props {
   // Filters
   filter: StudioFilter;
   onFilterChange: (filter: StudioFilter) => void;
+
+  // Background Lock & Transparency Status
+  hasTransparency: boolean;
+  hasImage: boolean;
+  isRemovingBg?: boolean;
+  onRemoveBackground?: () => void;
 }
 
 const SOLID_PALETTE_1 = ["#ffffff", "#121214", "#f1f5f9", "#475569", "#f5e6d3", "#38bdf8"];
@@ -89,6 +98,10 @@ export function BackgroundControlsPanel({
   onAdjustmentsChange,
   filter,
   onFilterChange,
+  hasTransparency,
+  hasImage,
+  isRemovingBg = false,
+  onRemoveBackground,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const colorPickerRef = useRef<HTMLInputElement>(null);
@@ -101,33 +114,35 @@ export function BackgroundControlsPanel({
 
   return (
     <aside className="studio-controls-panel">
-      {/* ── Section 1: BACKGROUND Category Cards ── */}
-      <div>
-        <div className="studio-section-label">Background</div>
-        <div className="category-cards-grid">
-          <button
-            className={`category-card-btn ${activeTab === "color" ? "active" : ""}`}
-            onClick={() => onTabChange("color")}
-          >
-            <Palette size={18} />
-            <span>Color</span>
-          </button>
-          <button
-            className={`category-card-btn ${activeTab === "gradient" ? "active" : ""}`}
-            onClick={() => onTabChange("gradient")}
-          >
-            <Layers size={18} />
-            <span>Gradient</span>
-          </button>
-          <button
-            className={`category-card-btn ${activeTab === "image" ? "active" : ""}`}
-            onClick={() => onTabChange("image")}
-          >
-            <ImageIcon size={18} />
-            <span>Image</span>
-          </button>
+      {/* ── Background Controls Wrapper (disabled if background not removed) ── */}
+      <div className={!hasTransparency && hasImage ? "studio-controls-disabled" : undefined} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+        {/* ── Section 1: BACKGROUND Category Cards ── */}
+        <div>
+          <div className="studio-section-label">Background</div>
+          <div className="category-cards-grid">
+            <button
+              className={`category-card-btn ${activeTab === "color" ? "active" : ""}`}
+              onClick={() => onTabChange("color")}
+            >
+              <Palette size={18} />
+              <span>Color</span>
+            </button>
+            <button
+              className={`category-card-btn ${activeTab === "gradient" ? "active" : ""}`}
+              onClick={() => onTabChange("gradient")}
+            >
+              <Layers size={18} />
+              <span>Gradient</span>
+            </button>
+            <button
+              className={`category-card-btn ${activeTab === "image" ? "active" : ""}`}
+              onClick={() => onTabChange("image")}
+            >
+              <ImageIcon size={18} />
+              <span>Image</span>
+            </button>
+          </div>
         </div>
-      </div>
 
       {/* ── Tab Content: Color (Only when Color tab is active) ── */}
       {activeTab === "color" && (
@@ -383,6 +398,7 @@ export function BackgroundControlsPanel({
           </div>
         </div>
       )}
+      </div>
 
       {/* ── Section: ADJUSTMENTS (Always visible) ── */}
       <div>
@@ -487,6 +503,53 @@ export function BackgroundControlsPanel({
           ))}
         </div>
       </div>
+
+      {/* ── Unlock / Removal Prompt below Image Filters (where empty space is available) ── */}
+      {!hasTransparency && hasImage && (
+        <div className="studio-unlock-prompt-card">
+          <div className="studio-unlock-prompt-header">
+            <div className="studio-unlock-sparkle-badge">
+              <Sparkles size={15} />
+            </div>
+            <div>
+              <div className="studio-unlock-prompt-title">Enable Background Features</div>
+              <div className="studio-unlock-prompt-sub">
+                Once the background is removed, you can apply solid colors, gradients, and preset backdrops.
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="studio-unlock-remove-btn"
+            disabled={isRemovingBg}
+            onClick={onRemoveBackground}
+          >
+            {isRemovingBg ? (
+              <>
+                <Loader size={14} className="studio-spin" />
+                <span>Removing Background…</span>
+              </>
+            ) : (
+              <>
+                <Sparkles size={14} />
+                <span>Remove Background (1 Credit)</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {!hasImage && (
+        <div className="studio-no-image-prompt-card">
+          <AlertCircle size={15} color="#d97706" style={{ flexShrink: 0, marginTop: "2px" }} />
+          <div>
+            <div className="studio-no-image-prompt-title">No image selected</div>
+            <div className="studio-no-image-prompt-sub">
+              Select an image on the Figma canvas or upload an image to use Background Studio.
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
