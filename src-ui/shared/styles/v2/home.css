@@ -1,0 +1,850 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   RemoveBG V2 — Home Screen Styling (Matching Wireframes 01 & 02)
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Manrope:wght@600;700;800&display=swap');
+
+.home-v2-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-weight: 400;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* ── Top Header ── */
+.home-v2-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  height: 52px;
+  flex-shrink: 0;
+  border-bottom: 1px solid #f1f5f9;
+  background: #ffffff;
+  z-index: 10;
+}
+
+.home-v2-brand {
+  display: flex;
+  align-items: center;
+}
+
+/* Logo / Brand — Manrope 800 */
+.home-v2-brand-name {
+  font-family: 'Manrope', sans-serif;
+  font-size: 16.5px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.3px;
+}
+
+.home-v2-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Credits Pill (Small label) — DM Sans 500 */
+.home-v2-credits-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border: 1px solid rgba(249, 115, 22, 0.25);
+  color: #ea580c;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: default;
+  user-select: none;
+}
+
+.home-v2-credits-icon {
+  color: #f97316;
+  fill: #f97316;
+}
+
+.home-v2-credits-count {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
+}
+
+/* Header Icon Buttons */
+.home-v2-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.home-v2-icon-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+/* ── Hero Titles ── */
+.home-v2-titles-wrap {
+  padding: 12px 18px 12px 18px;
+  flex-shrink: 0;
+}
+
+/* Main heading — Manrope 700 */
+.home-v2-main-title {
+  margin: 0;
+  font-family: 'Manrope', sans-serif;
+  font-size: 20.5px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.4px;
+  line-height: 1.25;
+}
+
+/* Body text — DM Sans 400 */
+.home-v2-main-subtitle {
+  margin: 4px 0 0 0;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+/* ── Main Content Area ── */
+.home-v2-content {
+  flex: 1;
+  padding: 0 18px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ── Empty State Dropzone ── */
+.home-v2-dropzone {
+  flex: 1;
+  min-height: 280px;
+  border: 1.5px dashed rgba(244, 63, 94, 0.4);
+  background: linear-gradient(180deg, rgba(255, 241, 242, 0.35) 0%, rgba(255, 255, 255, 0.6) 100%);
+  border-radius: 16px;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.home-v2-dropzone:hover,
+.home-v2-dropzone.drag-active {
+  border-color: #f43f5e;
+  background: rgba(255, 241, 242, 0.6);
+  transform: scale(0.995);
+}
+
+/* Sample Decorative Cards */
+.home-v2-illustration-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 170px;
+  height: 94px;
+  margin-bottom: 4px;
+}
+
+.home-v2-card-preview {
+  width: 84px;
+  height: 84px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  border: 1.5px solid #ffffff;
+  position: absolute;
+  transition: transform 0.2s ease;
+}
+
+.card-left {
+  left: 10px;
+  transform: rotate(-6deg);
+  z-index: 1;
+}
+
+.card-right {
+  right: 10px;
+  transform: rotate(6deg);
+  z-index: 2;
+}
+
+.home-v2-dropzone:hover .card-left {
+  transform: rotate(-10deg) translateX(-4px);
+}
+
+.home-v2-dropzone:hover .card-right {
+  transform: rotate(10deg) translateX(4px);
+}
+
+.home-v2-card-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.home-v2-card-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-bg-checkerboard {
+  background-color: #ffffff;
+  background-image: 
+    linear-gradient(45deg, #e2e8f0 25%, transparent 25%),
+    linear-gradient(-45deg, #e2e8f0 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e2e8f0 75%),
+    linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+  background-size: 10px 10px;
+  background-position: 0 0, 0 5px, 5px -5px, -5px 0px;
+}
+
+/* Dropzone Copy */
+.home-v2-dropzone-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Subheading — Manrope 600 */
+.home-v2-dropzone-title {
+  margin: 0;
+  font-family: 'Manrope', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* Body text — DM Sans 400 */
+.home-v2-dropzone-subtitle {
+  margin: 0;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  color: #64748b;
+}
+
+/* Dropzone Actions (Insert from canvas & Upload) */
+.home-v2-dropzone-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Insert from canvas button in dropzone — DM Sans 700 */
+.home-v2-canvas-insert-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  color: #0f172a;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.15s ease;
+}
+
+.home-v2-canvas-insert-btn:hover {
+  background: #f8fafc;
+  border-color: #6c47ff;
+  color: #6c47ff;
+  transform: translateY(-1px);
+}
+
+/* Upload Button in dropzone — DM Sans 700 */
+.home-v2-upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  color: #0f172a;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.15s ease;
+}
+
+.home-v2-upload-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+}
+
+/* Footer Action Buttons */
+.home-v2-canvas-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.home-v2-canvas-action-btn:hover {
+  background: #f8fafc;
+  border-color: #6c47ff;
+  color: #6c47ff;
+  transform: translateY(-1px);
+}
+
+/* Single Preview File Pill */
+.home-v2-single-file-pill {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  max-width: 80%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.home-v2-file-name-text {
+  font-family: 'Manrope', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-v2-file-dim-text {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* ── Single Image Selection Card ── */
+.home-v2-single-card {
+  flex: 1;
+  min-height: 300px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+}
+
+.home-v2-single-media-wrap {
+  flex: 1;
+  min-height: 250px;
+  position: relative;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.home-v2-single-img {
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
+  display: block;
+  border-radius: 8px;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.08));
+}
+
+/* Floating Status Badge Green */
+.home-v2-status-badge-green {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #10b981;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
+  z-index: 5;
+}
+
+/* Floating Remove (X) Button */
+.home-v2-tile-remove-btn.single-top-right {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.72);
+  color: #ffffff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  z-index: 5;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.home-v2-tile-remove-btn.single-top-right:hover {
+  background: #ef4444;
+  transform: scale(1.1);
+}
+
+/* Single Card Footer */
+.home-v2-single-footer {
+  padding: 10px 14px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.home-v2-footer-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  max-width: 220px;
+}
+
+/* Subheading — Manrope 600 */
+.home-v2-file-name {
+  font-family: 'Manrope', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Small label — DM Sans 500 */
+.home-v2-file-dim {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* Add More Button — DM Sans 700 */
+.home-v2-add-more-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.home-v2-add-more-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+}
+
+/* Clear Link — DM Sans 500 */
+.home-v2-clear-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.home-v2-clear-link:hover {
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+/* ── Multi Preview Matrix Card ── */
+.home-v2-multi-card {
+  flex: 1;
+  min-height: 280px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scroll area with clean slim scrollbar */
+.home-v2-multi-scroll-area {
+  flex: 1;
+  min-height: 0;
+  padding: 10px;
+  background: #f8fafc;
+  overflow-y: auto;
+}
+
+.home-v2-multi-scroll-area::-webkit-scrollbar {
+  width: 5px;
+}
+
+.home-v2-multi-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.home-v2-multi-scroll-area::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.home-v2-multi-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Matrix Layouts */
+.home-v2-matrix-grid {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+
+/* 2 items: 1x2 split */
+.home-v2-matrix-grid.grid-cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+  align-items: center;
+}
+
+.home-v2-matrix-grid.grid-cols-2 .home-v2-grid-tile {
+  aspect-ratio: 1 / 1;
+}
+
+/* 3 to 9 items: 3-column matrix with perfect squares! */
+.home-v2-matrix-grid.grid-matrix-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.home-v2-matrix-grid.grid-matrix-3 .home-v2-grid-tile {
+  aspect-ratio: 1 / 1;
+}
+
+/* Grid Tile — Clean Card with Padding so Image NEVER Cuts Off */
+.home-v2-grid-tile {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+.home-v2-tile-img-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.home-v2-tile-img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain; /* 100% visible - zero cropping or cutting */
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.06));
+}
+
+/* Floating (X) Cross Button on tiles */
+.home-v2-tile-remove-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.75);
+  color: #ffffff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  z-index: 5;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.home-v2-tile-remove-btn:hover {
+  background: #ef4444;
+  transform: scale(1.12);
+}
+
+.home-v2-tile-source-badge {
+  position: absolute;
+  bottom: 5px;
+  left: 5px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.65);
+  color: #ffffff;
+  pointer-events: none;
+}
+
+.home-v2-max-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ea580c;
+  margin-left: 4px;
+}
+
+.home-v2-multi-footer {
+  padding: 10px 14px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+/* Subheading — Manrope 600 */
+.home-v2-multi-count-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.home-v2-count-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #6c47ff;
+}
+
+.home-v2-multi-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Max Limit Reached Badge in Footer */
+.home-v2-max-limit-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #c2410c;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: default;
+  user-select: none;
+  animation: badgeFadeIn 0.18s ease;
+}
+
+@keyframes badgeFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ── Bottom Action Bar ── */
+.home-v2-footer {
+  padding: 12px 18px 16px 18px;
+  border-top: 1px solid #f1f5f9;
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.home-v2-action-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Primary Button — DM Sans 700 */
+.home-v2-primary-btn {
+  width: 100%;
+  height: 44px;
+  border-radius: 10px;
+  border: none;
+  background: #18181b;
+  color: #ffffff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.home-v2-primary-btn:hover:not(:disabled) {
+  background: #27272a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+}
+
+.home-v2-primary-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.home-v2-primary-btn.disabled,
+.home-v2-primary-btn:disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Secondary Edit Button — DM Sans 700 */
+.home-v2-secondary-btn {
+  width: 100%;
+  height: 40px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.home-v2-secondary-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  transform: translateY(-1px);
+}
+
+.home-v2-secondary-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.home-v2-secondary-btn.disabled,
+.home-v2-secondary-btn:disabled {
+  background: #f8fafc;
+  border-color: #f1f5f9;
+  color: #cbd5e1;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Small label — DM Sans 500 */
+.home-v2-action-caption {
+  margin: 2px 0 0 0;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: #94a3b8;
+  text-align: center;
+  line-height: 1.3;
+}
+

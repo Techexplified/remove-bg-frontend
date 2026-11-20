@@ -14,6 +14,7 @@ import { FeatureOptionsModal } from "./shared/components/modals/FeatureOptionsMo
 import { ComingSoonModal } from "./shared/components/modals/ComingSoonModal";
 import { FeaturePreviewModal } from "./shared/components/modals/FeaturePreviewModal";
 import { BgStudioGatewayModal } from "./shared/components/modals/BgStudioGatewayModal";
+import { HomeScreen } from "./features/home/HomeScreen";
 import { FeaturesScreen } from "./features/features-screen/FeaturesScreen";
 import { ToolboxScreen } from "./features/toolbox/ToolboxScreen";
 import { SettingsScreen } from "./features/settings/SettingsScreen";
@@ -407,13 +408,7 @@ function AppReady() {
           transition={{ duration: 0.14 }}
         >
           {activeSection === "features" && (
-            <FeaturesScreen
-              onRunFeature={handleRunFeature}
-              onManagePlan={() => dispatch(openModal({ kind: "plan_picker" }))}
-              onTopUp={() => dispatch(openModal({ kind: "topup" }))}
-              watching={checkoutWatcher.isWatching}
-              onStopWatching={checkoutWatcher.stop}
-            />
+            <HomeScreen />
           )}
           {activeSection === "toolbox" && (
             <ToolboxScreen

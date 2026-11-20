@@ -382,14 +382,25 @@ figma.ui.onmessage = async (msg: { type: string;[k: string]: unknown }) => {
 
     case "export-node-by-id": {
       const { requestId, nodeId } = msg as unknown as { requestId: string; nodeId: string };
-      const node = figma.getNodeById(nodeId);
-      if (!node || !isExportable(node as SceneNode)) {
-        figma.ui.postMessage({ type: "export-node-result", payload: { requestId, error: "Layer not found." } }); break;
-      }
       try {
+        let node: SceneNode | null = null;
+        node = (figma.currentPage.selection.find(n => n.id === nodeId) as SceneNode) || null;
+        if (!node) {
+          if ("getNodeByIdAsync" in figma) {
+            node = (await (figma as any).getNodeByIdAsync(nodeId)) as SceneNode | null;
+          } else {
+            node = (figma as any).getNodeById(nodeId) as SceneNode | null;
+          }
+        }
+        if (!node || !isExportable(node as SceneNode)) {
+          figma.ui.postMessage({ type: "export-node-result", payload: { requestId, error: "Layer not found." } });
+          break;
+        }
         const bytes = await (node as SceneNode & ExportMixin).exportAsync({ format: "PNG" });
         figma.ui.postMessage({ type: "export-node-result", payload: { requestId, bytes } });
-      } catch (e) { figma.ui.postMessage({ type: "export-node-result", payload: { requestId, error: e instanceof Error ? e.message : "Failed." } }); }
+      } catch (e) {
+        figma.ui.postMessage({ type: "export-node-result", payload: { requestId, error: e instanceof Error ? e.message : "Failed." } });
+      }
       break;
     }
 
