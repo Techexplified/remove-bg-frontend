@@ -46,7 +46,7 @@ export interface ProcessingState {
   extraBullets?: string[];
 }
 
-export type SectionId = "features" | "toolbox" | "account" | "help" | "legal" | "settings" | "batch" | "resize_export" | "background_studio";
+export type SectionId = "features" | "edit_studio" | "toolbox" | "account" | "help" | "legal" | "settings" | "batch" | "resize_export" | "background_studio";
 
 export type ModalKind = "none" | "topup" | "plan_picker" | "prompt" | "options" | "coming_soon" | "feature_preview" | "bg_studio_gateway";
 

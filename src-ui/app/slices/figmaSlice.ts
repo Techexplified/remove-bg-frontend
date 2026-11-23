@@ -11,6 +11,15 @@ export interface UploadedImageInfo {
   originalBytes?: Uint8Array;
 }
 
+export interface EditingImageInfo {
+  id: string;
+  name: string;
+  previewUrl: string;
+  width?: number;
+  height?: number;
+  bytes?: Uint8Array;
+}
+
 interface FigmaState {
   userId: string | null;
   displayName: string | null;
@@ -21,6 +30,7 @@ interface FigmaState {
   imageFormat: string;
   uploadedImage: UploadedImageInfo | null;
   activeImageSource: "canvas" | "upload";
+  editingImage: EditingImageInfo | null;
 }
 
 const CACHED_USER_ID_KEY = "removebg_cached_user_id";
@@ -54,6 +64,7 @@ const initialState: FigmaState = {
   imageFormat: "PNG",
   uploadedImage: null,
   activeImageSource: "canvas",
+  editingImage: null,
 };
 
 const figmaSlice = createSlice({
@@ -143,6 +154,9 @@ const figmaSlice = createSlice({
       s.uploadedImage = null;
       s.activeImageSource = "canvas";
     },
+    setEditingImage: (s, a: PayloadAction<EditingImageInfo | null>) => {
+      s.editingImage = a.payload;
+    },
   },
 });
 
@@ -155,5 +169,6 @@ export const {
   setUploadedImage,
   setActiveImageSource,
   clearUploadedImage,
+  setEditingImage,
 } = figmaSlice.actions;
 export default figmaSlice.reducer;

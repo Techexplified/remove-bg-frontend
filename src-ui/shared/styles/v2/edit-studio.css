@@ -1,0 +1,1429 @@
+/* ==========================================================================
+   RemoveBG V2 — Unified Edit Studio Stylesheet
+   Fonts: Manrope (Headings / CTAs) + DM Sans (Body / Labels / Controls)
+   ========================================================================== */
+
+.edit-studio-screen {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* ── Top Header ── */
+.edit-studio-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.edit-studio-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 8px;
+  color: #0f172a;
+  font-family: "Manrope", sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.edit-studio-back-btn:hover {
+  background: #f1f5f9;
+  color: #ea580c;
+}
+
+.edit-studio-history-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.edit-studio-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.edit-studio-icon-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.edit-studio-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: #f1f5f9;
+}
+
+.edit-studio-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-studio-apply-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 18px;
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  border-radius: 100px;
+  font-family: "Manrope", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.edit-studio-apply-btn:hover:not(:disabled) {
+  background: #1e293b;
+  transform: translateY(-1px);
+}
+
+.edit-studio-apply-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Main Canvas Viewport ── */
+.edit-studio-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.edit-studio-canvas-container {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  user-select: none;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.edit-studio-canvas-container.brush-mode,
+.edit-studio-canvas-container.brush-mode * {
+  cursor: none !important;
+}
+
+.edit-studio-canvas-viewport {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  max-width: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
+  transition: transform 0.15s ease-out;
+}
+
+.edit-studio-canvas-viewport.checkerboard {
+  background-image: 
+    linear-gradient(45deg, #e2e8f0 25%, transparent 25%),
+    linear-gradient(-45deg, #e2e8f0 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e2e8f0 75%),
+    linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+  background-color: #ffffff;
+}
+
+.edit-studio-main-canvas {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.edit-studio-selection-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Brush Cursor Overlay */
+.edit-studio-brush-cursor {
+  position: absolute;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  border: 1.5px solid rgba(244, 63, 94, 0.9);
+  background: rgba(244, 63, 94, 0.15);
+  border-radius: 50%;
+  z-index: 30;
+  will-change: left, top;
+}
+
+/* Dashed Crop Boundary for Resize Tab */
+.edit-studio-resize-crop-frame {
+  position: absolute;
+  border: 2px dashed #0f172a;
+  border-radius: 8px;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 6px;
+  box-sizing: border-box;
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.18);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.edit-studio-crop-dim-badge {
+  background: #0f172a;
+  color: #ffffff;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: "DM Sans", sans-serif;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Floating Zoom Controls */
+.edit-studio-floating-zoom {
+  position: absolute;
+  bottom: 12px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  padding: 4px 8px;
+  border-radius: 100px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  z-index: 10;
+}
+
+.edit-studio-zoom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.edit-studio-zoom-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.edit-studio-zoom-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: #334155;
+  min-width: 34px;
+  text-align: center;
+}
+
+/* Empty State: Single-surface dropzone (NO double background) */
+.edit-studio-canvas-container.empty {
+  padding: 20px;
+  background: #ffffff;
+}
+
+.edit-studio-empty-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+  height: 100%;
+  max-width: 340px;
+  max-height: 380px;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 32px 20px;
+  box-sizing: border-box;
+}
+
+.edit-studio-empty-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+.edit-studio-empty-title {
+  font-family: "Manrope", sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+}
+
+.edit-studio-empty-sub {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.45;
+  margin: 0 0 18px 0;
+}
+
+.edit-studio-empty-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-studio-canvas-insert-btn,
+.edit-studio-canvas-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-family: "DM Sans", sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.edit-studio-canvas-insert-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+}
+
+.edit-studio-canvas-insert-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.edit-studio-canvas-upload-btn {
+  background: #0f172a;
+  border: 1px solid #0f172a;
+  color: #ffffff;
+}
+
+.edit-studio-canvas-upload-btn:hover {
+  background: #1e293b;
+}
+
+/* ── Bottom Tool Configuration Drawer ── */
+.edit-studio-bottom-panel-container {
+  background: #ffffff;
+  border-top: 1px solid #f1f5f9;
+  padding: 8px 14px;
+  flex-shrink: 0;
+  height: 196px;
+  min-height: 196px;
+  max-height: 196px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  scrollbar-width: none;
+}
+
+.edit-studio-bottom-panel-container::-webkit-scrollbar {
+  display: none;
+}
+
+.edit-studio-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Tab-specific panel alignments */
+.edit-studio-tab-panel-filters {
+  justify-content: center;
+  gap: 12px;
+}
+
+.edit-studio-tab-panel-remove {
+  justify-content: center;
+  gap: 6px;
+}
+
+.edit-studio-tab-panel-refine {
+  justify-content: center;
+  gap: 6px;
+}
+
+.edit-studio-tab-panel-background {
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+.edit-studio-tab-panel-resize {
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+.edit-studio-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.edit-studio-panel-title {
+  font-family: "Manrope", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.edit-studio-reset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: #ea580c;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.edit-studio-reset-btn:hover {
+  background: rgba(234, 88, 12, 0.08);
+}
+
+.edit-studio-panel-caption {
+  font-size: 11px;
+  color: #64748b;
+  margin: 6px 0 0;
+  line-height: 1.4;
+}
+
+/* Sliders Grid */
+.edit-studio-sliders-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.edit-studio-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.edit-studio-slider-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.edit-studio-slider-value {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 11.5px;
+}
+
+.edit-studio-tab-panel,
+.edit-studio-slider-row,
+.edit-studio-slider-label {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.edit-studio-range-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  outline: none;
+  touch-action: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.edit-studio-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #0f172a;
+  cursor: grab;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.edit-studio-range-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+}
+
+/* ── Pointer-Captured Studio Slider ── */
+.studio-slider-container {
+  position: relative;
+  width: 100%;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+  outline: none;
+}
+
+.studio-slider-container:focus-visible .studio-slider-thumb {
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.2), 0 1px 4px rgba(15, 23, 42, 0.4);
+}
+
+.studio-slider-rail {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.studio-slider-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: #0f172a;
+  border-radius: 9999px;
+  pointer-events: none;
+}
+
+.studio-slider-thumb {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #0f172a;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.35);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 2;
+  transition: transform 0.1s ease;
+}
+
+.studio-slider-container:hover .studio-slider-thumb {
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
+/* Pill Segmented Controls (Erase vs Restore, Formats, etc) */
+.edit-studio-pill-segmented {
+  display: flex;
+  align-items: center;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 10px;
+  gap: 4px;
+  width: fit-content;
+}
+
+.edit-studio-pill-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.edit-studio-pill-option.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Segmented Buttons for Background (Colour | Gradient | Image) */
+.edit-studio-segmented-tabs {
+  display: flex;
+  align-items: center;
+  background: #f1f5f9;
+  padding: 2px;
+  border-radius: 8px;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.edit-studio-segmented-btn {
+  flex: 1;
+  padding: 4px 0;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  font-family: "Manrope", sans-serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.edit-studio-segmented-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.edit-studio-subpanel {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.edit-studio-subpanel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.edit-studio-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-studio-subpanel-subtitle {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Rainbow Color Picker Button */
+.edit-studio-rainbow-wheel-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: conic-gradient(from 90deg, #f43f5e, #fb923c, #facc15, #4ade80, #38bdf8, #818cf8, #c084fc, #f43f5e);
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+  padding: 0;
+  display: inline-block;
+}
+
+.edit-studio-rainbow-wheel-btn:hover {
+  transform: scale(1.15);
+}
+
+/* Custom Gradient Button (subtitle header action) */
+.edit-studio-custom-grad-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff7e5f, #feb47b);
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease;
+  padding: 0;
+}
+
+.edit-studio-custom-grad-btn:hover {
+  transform: scale(1.15);
+}
+
+/* 2×4 Swatches Grid (used across Colour, Gradient, and Image) */
+.edit-studio-swatches-grid-2x4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 1px;
+}
+
+.edit-studio-swatch-rect {
+  height: 32px;
+  border-radius: 8px;
+  border: 1.5px solid #e2e8f0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  padding: 0;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+}
+
+.edit-studio-swatch-rect:hover {
+  border-color: #cbd5e1;
+  transform: scale(1.02);
+}
+
+.edit-studio-swatch-rect.selected {
+  border: 2px solid #0f172a;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.2);
+}
+
+/* Custom Color Slot (Slot 1 in 2x4 grid) */
+.edit-studio-custom-color-slot {
+  background: #f8fafc;
+  border: 1.5px dashed #cbd5e1;
+  color: #64748b;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.edit-studio-custom-color-slot:hover {
+  border-color: #0f172a;
+  transform: scale(1.02);
+}
+
+.edit-studio-custom-color-slot.has-color {
+  border-style: solid;
+  border-color: #e2e8f0;
+}
+
+.edit-studio-custom-color-slot.selected {
+  border: 2px solid #0f172a;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.2);
+}
+
+.edit-studio-native-color-input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  pointer-events: none;
+}
+
+/* Custom Gradient Panel */
+.edit-studio-custom-gradient-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.edit-studio-custom-gradient-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.edit-studio-done-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.edit-studio-done-btn:hover {
+  background: #1e293b;
+}
+
+.edit-studio-gradient-stops-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.edit-studio-stop-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 3px 6px;
+  cursor: pointer;
+  position: relative;
+}
+
+.edit-studio-stop-title {
+  font-size: 10.5px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.edit-studio-stop-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.edit-studio-stop-hex {
+  font-size: 10px;
+  color: #0f172a;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.edit-studio-swap-stops-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.edit-studio-swap-stops-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.edit-studio-angle-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.edit-studio-angle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.edit-studio-angle-title {
+  font-size: 10.5px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.edit-studio-angle-val-box {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 2px 6px;
+  gap: 2px;
+}
+
+.edit-studio-angle-val-box input {
+  width: 38px;
+  border: none;
+  background: transparent;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: right;
+  outline: none;
+  padding: 0;
+  -moz-appearance: textfield;
+}
+
+.edit-studio-angle-val-box input::-webkit-outer-spin-button,
+.edit-studio-angle-val-box input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.edit-studio-angle-val-box span {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 700;
+}
+
+/* Image Tab: Empty Dropzone & Active Preview Card */
+.edit-studio-image-empty-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 14px 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.edit-studio-image-empty-dropzone:hover {
+  background: #f1f5f9;
+  border-color: #0f172a;
+}
+
+.edit-studio-image-upload-icon-wrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.edit-studio-image-upload-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.edit-studio-image-upload-subtitle {
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.edit-studio-image-active-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-top: 2px;
+}
+
+.edit-studio-image-active-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid #cbd5e1;
+  flex-shrink: 0;
+  background: #ffffff;
+}
+
+.edit-studio-image-active-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.edit-studio-image-active-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.edit-studio-image-active-status {
+  font-size: 10px;
+  color: #10b981;
+  font-weight: 600;
+}
+
+.edit-studio-image-active-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.edit-studio-image-change-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #0f172a;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.edit-studio-image-change-btn:hover {
+  background: #f1f5f9;
+  border-color: #0f172a;
+}
+
+.edit-studio-image-remove-btn {
+  background: transparent;
+  border: none;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 0;
+}
+
+.edit-studio-image-remove-btn:hover {
+  text-decoration: underline;
+}
+
+/* Filters Carousel */
+.edit-studio-filters-carousel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 8px 4px 8px;
+  scrollbar-width: none;
+}
+
+.edit-studio-filters-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.edit-studio-filter-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 2px;
+  outline: none;
+}
+
+.edit-studio-filter-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center;
+  background-color: #e2e8f0;
+  border: 2px solid transparent;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.edit-studio-filter-item.selected .edit-studio-filter-thumb {
+  border-color: #ea580c;
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.25);
+}
+
+.edit-studio-filter-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.edit-studio-filter-item.selected .edit-studio-filter-name {
+  color: #ea580c;
+  font-weight: 700;
+}
+
+/* Resize Tab Controls */
+.edit-studio-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.edit-studio-preset-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.edit-studio-preset-card:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.edit-studio-preset-card.selected {
+  background: #fff7ed;
+  border-color: #0f172a;
+  border-width: 2px;
+}
+
+.edit-studio-preset-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.edit-studio-preset-card.selected .edit-studio-preset-name {
+  color: #ea580c;
+}
+
+.edit-studio-preset-dims {
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 0;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.edit-studio-preset-card.selected .edit-studio-preset-dims {
+  color: #c2410c;
+}
+
+.edit-studio-custom-dims-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.edit-studio-dim-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.edit-studio-dim-field label {
+  font-size: 10.5px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.edit-studio-dim-input-wrap {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+
+.edit-studio-dim-input-wrap input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  outline: none;
+}
+
+.edit-studio-dim-input-wrap span {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.edit-studio-lock-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  margin-top: 14px;
+}
+
+.edit-studio-lock-btn.active {
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.edit-studio-format-selector-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.edit-studio-format-selector-row .edit-studio-pill-segmented {
+  padding: 2px;
+}
+
+.edit-studio-format-selector-row .edit-studio-pill-option {
+  padding: 3px 10px;
+  font-size: 11px;
+}
+
+.edit-studio-format-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+/* Freemium Banner */
+.edit-studio-freemium-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 4px 10px;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.edit-studio-freemium-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.edit-studio-freemium-btn {
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: "Manrope", sans-serif;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.edit-studio-freemium-btn:hover {
+  background: #1e293b;
+}
+
+/* ── Bottom Navigation Tabs ── */
+.edit-studio-footer {
+  background: #ffffff;
+  border-top: 1px solid #f1f5f9;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.edit-studio-bottom-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 6px 8px 10px;
+}
+
+.edit-studio-tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: transparent;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.edit-studio-tab-item:hover {
+  color: #0f172a;
+}
+
+.edit-studio-tab-item.active {
+  color: #ea580c;
+  background: rgba(234, 88, 12, 0.08);
+}
+
+.edit-studio-tab-icon-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-studio-tab-lock-badge {
+  position: absolute;
+  top: -4px;
+  right: -7px;
+  background: #0f172a;
+  color: #ffffff;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.edit-studio-tab-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+}
+
+/* ── Floating Change Image (Clear Selection) Button ── */
+.edit-studio-change-image-btn {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.72);
+  color: #ffffff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: all 0.15s ease;
+  z-index: 25;
+}
+
+.edit-studio-change-image-btn:hover {
+  background: #0f172a;
+  transform: scale(1.1);
+}
+
+/* ── Refine Tab Specific Header ── */
+.edit-studio-refine-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ── Remove Tab Specific Styles ── */
+.edit-studio-remove-cta-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 9px 16px;
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-family: "Manrope", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: all 0.15s ease;
+}
+
+.edit-studio-remove-cta-btn:hover:not(:disabled) {
+  background: #1e293b;
+}
+
+.edit-studio-remove-cta-btn.disabled,
+.edit-studio-remove-cta-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: #94a3b8;
+}

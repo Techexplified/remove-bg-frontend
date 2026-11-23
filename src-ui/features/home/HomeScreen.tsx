@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
-import { addToast } from "../../app/slices/uiSlice";
+import { addToast, setSection } from "../../app/slices/uiSlice";
+import { setEditingImage } from "../../app/slices/figmaSlice";
 import { usePluginBridgeContext } from "../../shared/context/PluginBridgeContext";
 import { HomeHeader } from "./components/HomeHeader";
 import { HomeEmptyState } from "./components/HomeEmptyState";
@@ -288,23 +289,21 @@ export function HomeScreen() {
 
   const handleEditClick = () => {
     if (stagedItems.length === 0) {
+      dispatch(setEditingImage(null));
+      dispatch(setSection("edit_studio"));
+    } else if (stagedItems.length === 1) {
+      const item = stagedItems[0];
       dispatch(
-        addToast({
-          id: `toast_edit_empty_${Date.now()}`,
-          kind: "info",
-          title: "Edit Studio (Empty)",
-          message: "Opening studio with transparent canvas. Tools browseable!",
+        setEditingImage({
+          id: item.id,
+          name: item.name,
+          previewUrl: item.previewUrl,
+          width: item.width,
+          height: item.height,
+          bytes: item.bytes,
         })
       );
-    } else {
-      dispatch(
-        addToast({
-          id: `toast_edit_single_${Date.now()}`,
-          kind: "info",
-          title: "Edit Studio",
-          message: `Editing ${stagedItems[0].name}. Studio tabs will be built in Phase 2.`,
-        })
-      );
+      dispatch(setSection("edit_studio"));
     }
   };
 

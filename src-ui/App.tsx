@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Provider } from "react-redux";
 import { store } from "./app/store";
 import { useAppDispatch, useAppSelector } from "./app/hooks";
-import { setProcessing, addToast, openModal, setLastRun, setCheckoutOverlay, incrementUseCount, setSection } from "./app/slices/uiSlice";
+import { setProcessing, addToast, setLastRun, setCheckoutOverlay, incrementUseCount, setSection } from "./app/slices/uiSlice";
 import { CheckoutOverlay } from "./shared/components/CheckoutOverlay";
 import { ProcessingOverlay } from "./shared/components/ProcessingOverlay";
 import { ToastStack } from "./shared/components/toasts/ToastStack";
@@ -15,12 +15,13 @@ import { ComingSoonModal } from "./shared/components/modals/ComingSoonModal";
 import { FeaturePreviewModal } from "./shared/components/modals/FeaturePreviewModal";
 import { BgStudioGatewayModal } from "./shared/components/modals/BgStudioGatewayModal";
 import { HomeScreen } from "./features/home/HomeScreen";
-import { FeaturesScreen } from "./features/features-screen/FeaturesScreen";
+// import { FeaturesScreen } from "./features/features-screen/FeaturesScreen";
 import { ToolboxScreen } from "./features/toolbox/ToolboxScreen";
 import { SettingsScreen } from "./features/settings/SettingsScreen";
 import { BatchProcessScreen } from "./features/batch/BatchProcessScreen";
 import { ResizeExportScreen } from "./features/resize-export/ResizeExportScreen";
 import { BackgroundStudioScreen } from "./features/background-studio/BackgroundStudioScreen";
+import { EditStudioScreen } from "./features/edit-studio/EditStudioScreen";
 import { ExitIntentQuestion } from "./shared/components/feedback/ExitIntentQuestion";
 import { ReviewPrompt } from "./shared/components/feedback/ReviewPrompt";
 import { PluginBridgeProvider, usePluginBridgeContext } from "./shared/context/PluginBridgeContext";
@@ -29,7 +30,7 @@ import { loadPlanStatus, deductCredits } from "./app/slices/statusSlice";
 import { setOriginalUrl, setPreviewUrl, setUploadedImage } from "./app/slices/figmaSlice";
 import { runFeature, resetSession, ApiError } from "./shared/api/client";
 import { removeBackgroundLocal } from "./shared/utils/fallbackRemoval";
-import { isFeatureUnlocked, ALL_FEATURES, PRIMARY_FEATURE } from "./shared/types/featureData";
+import { ALL_FEATURES, PRIMARY_FEATURE } from "./shared/types/featureData";
 import type { FeatureDef, SectionId } from "./shared/types/features";
 import type { FeatureId } from "./shared/types/api";
 
@@ -279,6 +280,7 @@ function AppReady() {
   // so it must not be in the dep array (causes spurious hook re-creations).
   }, [status, dispatch, bridge, toast]);
 
+  /*
   function handleRunFeature(feature: FeatureDef, localBytes?: Uint8Array) {
     if (!status) return;
     if (!isFeatureUnlocked(feature, status.plan)) {
@@ -319,6 +321,7 @@ function AppReady() {
     }
     void executeFeature(feature, {}, effectiveBytes);
   }
+  */
 
   function handlePromptSubmit(featureId: FeatureId, prompt: string) {
     const f = ALL_FEATURES.find(f => f.id === featureId);
@@ -409,6 +412,9 @@ function AppReady() {
         >
           {activeSection === "features" && (
             <HomeScreen />
+          )}
+          {activeSection === "edit_studio" && (
+            <EditStudioScreen />
           )}
           {activeSection === "toolbox" && (
             <ToolboxScreen

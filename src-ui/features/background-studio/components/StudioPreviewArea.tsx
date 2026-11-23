@@ -12,7 +12,7 @@ export function StudioPreviewArea({
   originalCutoutUrl,
   compositedPreviewUrl,
   isCompositing,
-  hasTransparency = true,
+  hasTransparency: _hasTransparency = true,
 }: Props) {
   const [showBefore, setShowBefore] = useState(false);
 
