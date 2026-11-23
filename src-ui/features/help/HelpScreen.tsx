@@ -1,79 +1,93 @@
 import { useState } from "react";
-import { Mail, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, Bug } from "lucide-react";
+import {
+  Mail,
+  ChevronDown,
+  ChevronUp,
+  ChevronRight,
+  ChevronLeft,
+  Bug,
+  CreditCard,
+  CircleDollarSign,
+  RefreshCw,
+  Wrench,
+  Sparkles,
+  BookOpen,
+} from "lucide-react";
 import { FAQ_DATA } from "../../shared/types/featureData";
 
-interface Props { openExternal: (url: string) => void; }
+interface Props {
+  openExternal: (url: string) => void;
+  onBack?: () => void;
+}
 
 const TOPICS = [
-  { label: "Billing Issues", icon: "💳", className: "chip-billing" },
-  { label: "Payment Issues", icon: "💰", className: "chip-payment" },
-  { label: "Subscription Help", icon: "🔄", className: "chip-subscription" },
-  { label: "Technical Issues", icon: "🔧", className: "chip-technical" },
-  { label: "Feature Requests", icon: "⭐", className: "chip-feature" },
+  { label: "Billing Issues", icon: CreditCard },
+  { label: "Payment Issues", icon: CircleDollarSign },
+  { label: "Subscription Help", icon: RefreshCw },
+  { label: "Technical Issues", icon: Wrench },
+  { label: "Feature Requests", icon: Sparkles },
 ];
 
 const CAT_COLORS: Record<string, string> = {
-  "Plans & Billing": "#6c47ff",
-  "Payments & Billing": "#6c47ff",
-  "Credits": "#2563eb",
+  "Plans & Billing": "#0f172a",
+  "Payments & Billing": "#0f172a",
+  Credits: "#2563eb",
   "Account & Subscription": "#16a34a",
   "Upgrades & Downgrades": "#16a34a",
-  "Cancellation": "#16a34a",
-  "Technical": "#d97706",
-  "Refunds": "#d97706",
-  "Contact & Support": "#6c47ff",
-  "Privacy & Data": "#16a34a"
+  Cancellation: "#ea580c",
+  Technical: "#d97706",
+  Refunds: "#d97706",
+  "Contact & Support": "#0f172a",
+  "Privacy & Data": "#16a34a",
 };
 
 const CAT_BG_COLORS: Record<string, string> = {
-  "Plans & Billing": "rgba(108,71,255,.08)",
-  "Payments & Billing": "rgba(108,71,255,.08)",
-  "Credits": "rgba(37,99,235,.08)",
-  "Account & Subscription": "rgba(22,163,74,.08)",
-  "Upgrades & Downgrades": "rgba(22,163,74,.08)",
-  "Cancellation": "rgba(22,163,74,.08)",
-  "Technical": "rgba(217,119,6,.08)",
-  "Refunds": "rgba(217,119,6,.08)",
-  "Contact & Support": "rgba(108,71,255,.08)",
-  "Privacy & Data": "rgba(22,163,74,.08)"
+  "Plans & Billing": "rgba(15, 23, 42, 0.06)",
+  "Payments & Billing": "rgba(15, 23, 42, 0.06)",
+  Credits: "rgba(37, 99, 235, 0.08)",
+  "Account & Subscription": "rgba(22, 163, 74, 0.08)",
+  "Upgrades & Downgrades": "rgba(22, 163, 74, 0.08)",
+  Cancellation: "rgba(234, 88, 12, 0.08)",
+  Technical: "rgba(217, 119, 6, 0.08)",
+  Refunds: "rgba(217, 119, 6, 0.08)",
+  "Contact & Support": "rgba(15, 23, 42, 0.06)",
+  "Privacy & Data": "rgba(22, 163, 74, 0.08)",
 };
 
 const CAT_CLASSES: Record<string, string> = {
   "Plans & Billing": "plans-billing",
   "Payments & Billing": "plans-billing",
-  "Refunds": "technical",
-  "Cancellation": "account-subscription",
+  Refunds: "technical",
+  Cancellation: "account-subscription",
   "Upgrades & Downgrades": "account-subscription",
-  "Credits": "credits",
+  Credits: "credits",
   "Account & Subscription": "account-subscription",
-  "Technical": "technical",
+  Technical: "technical",
   "Contact & Support": "plans-billing",
-  "Privacy & Data": "account-subscription"
+  "Privacy & Data": "account-subscription",
 };
 
-export function HelpScreen({ openExternal }: Props) {
+export function HelpScreen({ openExternal, onBack }: Props) {
   const [view, setView] = useState<"main" | "faq">("main");
   const [open, setOpen] = useState<number | null>(null);
 
-  // We want the 4 questions from the screenshot for the preview list
   const previewQuestions = [
-    "Why does my bank statement show \"Dodo Payments\" instead of Explified or RemoveBG?",
+    'Why does my bank statement show "Dodo Payments" instead of Explified or RemoveBG?',
     "Will I be charged automatically every month?",
     "How do I cancel my subscription?",
-    "What happens to my credits when I upgrade or downgrade?"
+    "What happens to my credits when I upgrade or downgrade?",
   ];
 
-  const previewFaqs = FAQ_DATA.filter(f => previewQuestions.includes(f.question));
-  const categories = [...new Set(FAQ_DATA.map(f => f.category))];
+  const previewFaqs = FAQ_DATA.filter((f) => previewQuestions.includes(f.question));
+  const categories = [...new Set(FAQ_DATA.map((f) => f.category))];
 
   const handlePreviewClick = (questionText: string) => {
-    const idx = FAQ_DATA.findIndex(f => f.question === questionText);
+    const idx = FAQ_DATA.findIndex((f) => f.question === questionText);
     setOpen(idx !== -1 ? idx : 0);
     setView("faq");
   };
 
   const handleViewAllFaqs = () => {
-    // Open the first FAQ item by default if nothing else is chosen
     if (open === null) {
       setOpen(0);
     }
@@ -82,38 +96,55 @@ export function HelpScreen({ openExternal }: Props) {
 
   if (view === "faq") {
     return (
-      <>
-        <div className="breadcrumb-container">
-          <button className="breadcrumb-link" onClick={() => setView("main")}>
-            <ChevronLeft size={13} /> Help
-          </button>
-        </div>
-        <div className="pane-header">
-          <h2>FAQ</h2>
-          <p>Answers to common questions</p>
-        </div>
-        <div className="pane-body" style={{ paddingTop: 10 }}>
-          {categories.map(cat => {
-            const catFaqs = FAQ_DATA.filter(f => f.category === cat);
+      <div className="v2-settings-screen">
+        <header className="v2-settings-header">
+          <div className="v2-settings-header-left">
+            <button
+              type="button"
+              className="v2-back-icon-btn"
+              onClick={() => setView("main")}
+              title="Back to help"
+            >
+              <ChevronLeft size={16} strokeWidth={2.4} />
+            </button>
+            <h1 className="v2-settings-title">Frequently Asked Questions</h1>
+          </div>
+        </header>
+
+        <div className="v2-settings-body">
+          {categories.map((cat) => {
+            const catFaqs = FAQ_DATA.filter((f) => f.category === cat);
             if (catFaqs.length === 0) return null;
 
             return (
               <div key={cat} className="faq-section">
-                <span className="faq-cat-badge" style={{
-                  color: CAT_COLORS[cat] ?? "var(--c-text-3)",
-                  backgroundColor: CAT_BG_COLORS[cat] ?? "var(--c-bg-2)"
-                }}>
+                <span
+                  className="faq-cat-badge"
+                  style={{
+                    color: CAT_COLORS[cat] ?? "#475569",
+                    backgroundColor: CAT_BG_COLORS[cat] ?? "#f1f5f9",
+                    fontFamily: "Manrope, sans-serif",
+                    fontWeight: 700,
+                  }}
+                >
                   {cat}
                 </span>
-                {catFaqs.map((faq, i) => {
+                {catFaqs.map((faq) => {
                   const idx = FAQ_DATA.indexOf(faq);
                   const isOpen = open === idx;
                   const catClass = CAT_CLASSES[cat] ?? "technical";
                   return (
-                    <div key={i} className={`faq-item faq-item-${catClass} ${isOpen ? "expanded" : ""}`}>
+                    <div
+                      key={faq.question}
+                      className={`faq-item faq-item-${catClass} ${isOpen ? "expanded" : ""}`}
+                    >
                       <div className="faq-q" onClick={() => setOpen(isOpen ? null : idx)}>
                         <span style={{ paddingRight: 8 }}>{faq.question}</span>
-                        {isOpen ? <ChevronUp size={14} color="var(--c-text-3)" /> : <ChevronDown size={14} color="var(--c-text-3)" />}
+                        {isOpen ? (
+                          <ChevronUp size={14} color="#64748b" />
+                        ) : (
+                          <ChevronDown size={14} color="#64748b" />
+                        )}
                       </div>
                       {isOpen && <div className="faq-a">{faq.answer}</div>}
                     </div>
@@ -123,75 +154,115 @@ export function HelpScreen({ openExternal }: Props) {
             );
           })}
         </div>
-        <div className="pane-footer">
-          <a href="#" onClick={(e) => { e.preventDefault(); openExternal("https://explified.com/privacy-policy"); }}>Privacy</a> ·{" "}
-          <a href="#" onClick={(e) => { e.preventDefault(); openExternal("https://explified.com/terms-of-service"); }}>Terms</a> ·{" "}
-          <a href="#" onClick={(e) => { e.preventDefault(); openExternal("mailto:support@explified.com"); }}>Support</a>
-          <br />
-          Built by Explified 
-        </div>
-      </>
+      </div>
     );
   }
 
   return (
-    <>
-      <div className="pane-header">
-        <h2>Help</h2>
-        <p>We're here to help</p>
-      </div>
-      <div className="pane-body">
+    <div className="v2-settings-screen">
+      <header className="v2-settings-header">
+        <div className="v2-settings-header-left">
+          {onBack && (
+            <button
+              type="button"
+              className="v2-back-icon-btn"
+              onClick={onBack}
+              title="Back to account"
+            >
+              <ChevronLeft size={16} strokeWidth={2.4} />
+            </button>
+          )}
+          <h1 className="v2-settings-title">Help & Support</h1>
+        </div>
+      </header>
+
+      <div className="v2-settings-body">
+        {/* Contact Support Card */}
         <div className="help-contact-card">
-          <div className="help-contact-icon"><Mail size={20} /></div>
+          <div className="help-contact-icon">
+            <Mail size={20} />
+          </div>
           <div className="help-contact-email">support@explified.com</div>
           <div className="help-contact-actions">
-            <button className="btn btn-primary" onClick={() => openExternal("mailto:support@explified.com")}>Contact Support</button>
-            <button className="btn btn-danger" onClick={() => openExternal("mailto:support@explified.com?subject=Bug+Report")}>
-              <Bug size={12} />Report a Bug
+            <button
+              type="button"
+              className="v2-help-action-btn primary"
+              onClick={() => openExternal("mailto:support@explified.com")}
+            >
+              Contact Support
+            </button>
+            <button
+              type="button"
+              className="v2-help-action-btn secondary"
+              onClick={() => openExternal("mailto:support@explified.com?subject=Bug+Report")}
+            >
+              <Bug size={13} strokeWidth={2} color="#ef4444" />
+              <span>Report a Bug</span>
             </button>
           </div>
         </div>
 
+        {/* Need Help With Topics Card */}
         <div className="help-topics-card">
           <div className="help-topics-title">Need Help With?</div>
           <div className="help-topics-sub">Select a topic to get targeted support</div>
           <div className="help-topics-chips">
-            {TOPICS.map(t => (
-              <button key={t.label} className={`help-topic-chip ${t.className}`}
-                onClick={() => openExternal(`mailto:support@explified.com?subject=${encodeURIComponent(t.label)}`)}>
-                {t.icon} {t.label}
+            {TOPICS.map((t) => (
+              <button
+                key={t.label}
+                type="button"
+                className="help-topic-chip"
+                onClick={() =>
+                  openExternal(
+                    `mailto:support@explified.com?subject=${encodeURIComponent(t.label)}`
+                  )
+                }
+              >
+                <t.icon size={13} strokeWidth={2} className="help-topic-icon" />
+                <span>{t.label}</span>
               </button>
             ))}
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, padding: "0 2px" }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--c-text)" }}>Frequently Asked</div>
-          <button className="btn btn-ghost" style={{ fontSize: 11, padding: "4px 8px", border: "none", color: "var(--brand)" }} onClick={handleViewAllFaqs}>
-            View All <ChevronRight size={12} style={{ marginLeft: 2, display: "inline-block", verticalAlign: "middle" }} />
+        {/* FAQ Preview */}
+        <div className="v2-faq-preview-header">
+          <div className="v2-faq-preview-title">
+            Frequently Asked
+          </div>
+          <button
+            type="button"
+            className="v2-faq-view-link"
+            onClick={handleViewAllFaqs}
+          >
+            <span>View All</span>
+            <ChevronRight size={13} strokeWidth={2} />
           </button>
         </div>
 
         <div className="faq-preview-list">
-          {previewFaqs.map((faq, i) => (
-            <div key={i} className="faq-preview-row" onClick={() => handlePreviewClick(faq.question)}>
+          {previewFaqs.map((faq) => (
+            <div
+              key={faq.question}
+              className="faq-preview-row"
+              onClick={() => handlePreviewClick(faq.question)}
+            >
               <span>{faq.question}</span>
-              <ChevronRight size={13} color="var(--c-text-3)" />
+              <ChevronRight size={13} color="#94a3b8" />
             </div>
           ))}
         </div>
 
-        <button className="btn btn-block" style={{ marginTop: 12, display: "flex", gap: "6px", justifyContent: "center" }} onClick={handleViewAllFaqs}>
-          📖 View Full FAQ
+        <button
+          type="button"
+          className="v2-view-faq-btn"
+          onClick={handleViewAllFaqs}
+        >
+          <BookOpen size={14} strokeWidth={2} className="v2-view-faq-icon" />
+          <span>View Full FAQ</span>
+          <ChevronRight size={14} strokeWidth={2} className="v2-view-faq-chevron" />
         </button>
       </div>
-      <div className="pane-footer">
-        <a href="#" onClick={(e) => { e.preventDefault(); openExternal("https://explified.com/privacy-policy"); }}>Privacy</a> ·{" "}
-        <a href="#" onClick={(e) => { e.preventDefault(); openExternal("https://explified.com/terms-of-service"); }}>Terms</a> ·{" "}
-        <a href="#" onClick={(e) => { e.preventDefault(); openExternal("mailto:support@explified.com"); }}>Support</a>
-        <br />
-        Built by Explified 
-      </div>
-    </>
+    </div>
   );
 }

@@ -32,11 +32,11 @@ export function HomeHeader({ creditsRemaining, onHistoryClick, onProfileClick }:
           <Clock size={16} />
         </button>
 
-        {/* Account / Profile Icon Button (Non-wired visual placeholder) */}
+        {/* Account / Profile Icon Button */}
         <button
           type="button"
           className="home-v2-icon-btn"
-          title="Account (Coming soon)"
+          title="Account & Settings"
           onClick={onProfileClick}
         >
           <User size={16} />

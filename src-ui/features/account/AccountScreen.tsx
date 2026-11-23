@@ -1,32 +1,48 @@
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Check, ChevronRight, ChevronLeft, HelpCircle, Star, FileText } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { loadPlanStatus } from "../../app/slices/statusSlice";
 import { fetchManagePlanUrls } from "../../shared/api/client";
 import { PLAN_LIMITS } from "../../shared/types/featureData";
 
-interface Props { onManagePlan: () => void; onTopUp: () => void; openExternal: (url: string) => void; watching: boolean; onStopWatching: () => void; }
+interface Props {
+  onManagePlan: () => void;
+  onTopUp: () => void;
+  openExternal: (url: string) => void;
+  watching: boolean;
+  onStopWatching: () => void;
+  onNavigateTab?: (tab: "help" | "legal" | "feedback") => void;
+  onBackToHome?: () => void;
+}
 
 function fmtDate(v: string | null | undefined) {
   if (!v) return "—";
   const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return Number.isNaN(d.getTime())
+    ? "—"
+    : d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function SubRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="sub-detail-row">
-      <span className="sub-detail-key">{label}</span>
-      <span className="sub-detail-val">{value}</span>
+    <div className="v2-sub-row">
+      <span className="v2-sub-key">{label}</span>
+      <span className="v2-sub-val">{value}</span>
     </div>
   );
 }
 
-export function AccountScreen({ onManagePlan, onTopUp, openExternal }: Props) {
+export function AccountScreen({
+  onManagePlan,
+  onTopUp,
+  openExternal,
+  onNavigateTab,
+  onBackToHome,
+}: Props) {
   const dispatch = useAppDispatch();
-  const status = useAppSelector(s => s.status.data);
+  const status = useAppSelector((s) => s.status.data);
   const refetch = () => dispatch(loadPlanStatus());
-  const displayName = useAppSelector(s => s.figma.displayName);
-  const userId = useAppSelector(s => s.figma.userId);
+  const displayName = useAppSelector((s) => s.figma.displayName);
+  const userId = useAppSelector((s) => s.figma.userId);
 
   async function handleManageBilling() {
     try {
@@ -45,153 +61,227 @@ export function AccountScreen({ onManagePlan, onTopUp, openExternal }: Props) {
   const isFree = plan === "free";
   const monthlyCredits = status?.credits ?? 0;
   const limit = PLAN_LIMITS[plan] ?? 3;
-  const spendableTopup = plan === "pro" ? (status?.topupCreditsPro ?? 0) : plan === "starter" ? (status?.topupCreditsStarter ?? 0) : 0;
-  const remainingPct = limit > 0 ? Math.min(100, Math.max(0, Math.round((monthlyCredits / limit) * 100))) : 0;
+  const spendableTopup =
+    plan === "starter" ? status?.topupCreditsStarter ?? 0 : status?.topupCreditsPro ?? 0;
+  const remainingPct =
+    limit > 0 ? Math.min(100, Math.max(0, Math.round((monthlyCredits / limit) * 100))) : 0;
 
   const isCancelling = !!status?.scheduledCancelAt;
   const isDowngradeScheduled = status?.scheduledPlanChange === "starter";
   const cancelLabel = fmtDate(status?.scheduledCancelAt);
   const renewLabel = fmtDate(status?.subscriptionEndsAt);
-  const initials = displayName ? displayName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() : userId?.slice(0, 2).toUpperCase() ?? "?";
+  const initials = displayName
+    ? displayName
+        .split(" ")
+        .map((w) => w[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : userId?.slice(0, 2).toUpperCase() ?? "U";
 
-  const dateRowLabel = isCancelling ? "Access until" : (isDowngradeScheduled || !status?.isActive) ? "Plan ends" : "Next Renewal";
+  const dateRowLabel = isCancelling
+    ? "Access until"
+    : isDowngradeScheduled || !status?.isActive
+    ? "Plan ends"
+    : "Next Renewal";
   const dateRowValue = isCancelling ? cancelLabel : renewLabel;
 
   return (
-    <>
-      <div className="pane-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <h2 style={{ fontSize: "16px", fontWeight: "800", color: "var(--c-text)" }}>Account</h2>
-          <p style={{ fontSize: "11px", color: "var(--c-text-3)" }}>Your plan and identity</p>
+    <div className="v2-settings-screen">
+      {/* Top Header */}
+      <header className="v2-settings-header">
+        <div className="v2-settings-header-left">
+          {onBackToHome && (
+            <button
+              type="button"
+              className="v2-back-icon-btn"
+              onClick={onBackToHome}
+              title="Back to home"
+            >
+              <ChevronLeft size={16} strokeWidth={2.4} />
+            </button>
+          )}
+          <h1 className="v2-settings-title">Account</h1>
         </div>
-        <button onClick={() => refetch()} style={{ background: "none", border: "none", color: "var(--c-text-3)", cursor: "pointer" }}>
-          <RefreshCw size={14} />
+        <button
+          type="button"
+          className="v2-header-action-btn"
+          onClick={() => refetch()}
+          title="Refresh account status"
+        >
+          <RefreshCw size={14} strokeWidth={2} />
         </button>
-      </div>
+      </header>
 
-      <div className="pane-body">
-        {/* User Identity Card */}
-        <div className="account-identity">
-          <div className="account-avatar">{initials}</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="account-name">{displayName ?? "Explified"}</div>
-            <div className="account-figma-id">{userId ?? "Auto-Linked Figma"}</div>
+      {/* Main Body */}
+      <div className="v2-settings-body">
+        {/* Card 1: Combined Dark Navy Hero Card (#0f172a) */}
+        <div className="v2-account-hero-card">
+          <div className="v2-hero-identity-row">
+            <div className="v2-hero-user-group">
+              <div className="v2-hero-avatar">{initials}</div>
+              <div className="v2-hero-user-info">
+                <span className="v2-hero-user-name" title={displayName ?? "Explified"}>
+                  {displayName ?? "Explified"}
+                </span>
+                <span className="v2-hero-user-id" title={userId ?? "Auto-Linked Figma"}>
+                  {userId ?? "Auto-Linked Figma"}
+                </span>
+              </div>
+            </div>
+            <span className="v2-hero-auto-badge">AUTO-LINKED FIGMA</span>
           </div>
-          <span className="account-auto-linked">AUTO-LINKED FIGMA</span>
+
+          <div className="v2-hero-divider" />
+
+          <div className="v2-hero-plan-section">
+            <span className="v2-hero-plan-label">YOUR PLAN</span>
+            <div className="v2-hero-credits-title">
+              {monthlyCredits} {monthlyCredits === 1 ? "credit" : "credits"} left
+            </div>
+            <div className="v2-hero-progress-track">
+              <div
+                className="v2-hero-progress-fill"
+                style={{ width: `${remainingPct}%` }}
+              />
+            </div>
+            <span className="v2-hero-plan-copy">
+              {monthlyCredits} of {limit} images left. A credit is used only when you apply.
+              {spendableTopup > 0 && ` (+${spendableTopup} top-up)`}
+            </span>
+          </div>
         </div>
 
-        {/* Current Plan Card */}
-        <div className="card">
-          <div className="card-label">Current Plan</div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-            <div>
-              <div style={{ fontSize: "20px", fontWeight: "800", color: "var(--c-text)", letterSpacing: "-0.01em" }}>
-                {plan.toUpperCase()}
+        {/* Card 2: Conditional by Plan */}
+        {isFree ? (
+          /* Free Plan: Wireframe Starter Pitch Card */
+          <div className="v2-starter-pitch-card">
+            <div className="v2-starter-pitch-header">
+              <span className="v2-starter-pitch-name">Starter</span>
+              <div className="v2-starter-pitch-price">
+                $5 <span className="v2-starter-pitch-period">/ month</span>
               </div>
-              <div style={{ fontSize: "11px", color: "var(--c-text-3)", marginTop: "4px" }}>
-                {isFree ? (
-                  <>
-                    You have <strong style={{ color: "var(--brand)" }}>{monthlyCredits}</strong> of {limit} free images remaining{spendableTopup > 0 ? ` (+${spendableTopup} top-up)` : ""}.
-                  </>
+            </div>
+            <div className="v2-starter-pitch-features">
+              <div className="v2-starter-feature-item">
+                <Check size={14} strokeWidth={2.5} className="v2-starter-check-icon" />
+                <span>50 images every month</span>
+              </div>
+              <div className="v2-starter-feature-item">
+                <Check size={14} strokeWidth={2.5} className="v2-starter-check-icon" />
+                <span>Unlocks Background and Resize</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="v2-starter-upgrade-btn"
+              onClick={onManagePlan}
+            >
+              Upgrade to Starter
+            </button>
+          </div>
+        ) : (
+          /* Starter Plan: Subscription Details Card (no pitch card to prevent scrolling) */
+          <div className="v2-sub-details-card">
+            <div className="v2-sub-details-header">Subscription Details</div>
+            <SubRow
+              label="Plan Type"
+              value={<span className="v2-plan-tag-starter">STARTER</span>}
+            />
+            <SubRow
+              label="Account Status"
+              value={
+                isCancelling ? (
+                  <span className="v2-status-dot-cancelling">Cancelling</span>
+                ) : status?.isActive ? (
+                  <span className="v2-status-dot-active">Active</span>
                 ) : (
-                  <>
-                    You have <strong style={{ color: "var(--brand)" }}>{monthlyCredits}</strong> of {limit} credits remaining from your monthly quota{spendableTopup > 0 ? ` (+${spendableTopup} top-up)` : ""}.
-                  </>
-                )}
-              </div>
-            </div>
+                  <span style={{ color: "#ef4444", fontWeight: 600 }}>Inactive</span>
+                )
+              }
+            />
+            <SubRow label="Billing Cycle" value="Monthly" />
+            <SubRow label={dateRowLabel} value={dateRowValue || "—"} />
+            <SubRow
+              label="Days Remaining"
+              value={
+                <span style={{ color: "#0f172a", fontWeight: 700 }}>
+                  {status?.daysLeft != null
+                    ? `${status.daysLeft} ${status.daysLeft === 1 ? "Day" : "Days"}`
+                    : "—"}
+                </span>
+              }
+            />
 
-            {/* Circular progress gauge */}
-            <div className="gauge-container">
-              <svg width="64" height="64" viewBox="0 0 64 64">
-                <circle cx="32" cy="32" r="26" fill="none" stroke="var(--c-border)" strokeWidth="6" />
-                <circle
-                  cx="32" cy="32" r="26" fill="none" stroke="var(--brand)" strokeWidth="6"
-                  strokeDasharray="163.36" strokeDashoffset={163.36 * (1 - remainingPct / 100)}
-                  strokeLinecap="round" transform="rotate(-90 32 32)"
-                  style={{ transition: "stroke-dashoffset 0.5s ease" }}
-                />
-              </svg>
-              <div className="gauge-pct">{remainingPct}%</div>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: "8px", marginTop: "14px" }}>
-            {isFree ? (
-              <button className="btn btn-primary" style={{ width: "100%", height: "38px" }} onClick={onManagePlan}>
-                Upgrade Plan
+            <div className="v2-sub-actions-row">
+              <button
+                type="button"
+                className="v2-topup-btn"
+                onClick={onTopUp}
+              >
+                Top Up
               </button>
-            ) : (
-              <>
-                <button className="btn btn-ghost" style={{ flex: 1, height: "38px" }} onClick={onTopUp}>
-                  Top Up
-                </button>
-                <button className="btn btn-primary" style={{ flex: 1, height: "38px" }} onClick={onManagePlan}>
-                  Manage Plan
-                </button>
-              </>
-            )}
+              <button
+                type="button"
+                className="v2-manage-billing-btn"
+                onClick={handleManageBilling}
+              >
+                Manage Billing & Invoice
+              </button>
+            </div>
           </div>
-        </div>
-
-        {/* Subscription Details */}
-        <div className="card">
-          <div className="card-label">Subscription Details</div>
-          <Row label="Plan Type" value={<span className={`badge badge-${plan}`}>{plan.toUpperCase()}</span>} />
-          <Row
-            label="Account Status"
-            value={
-              isFree ? (
-                <span style={{ color: "var(--c-text-2)", fontWeight: "600" }}>Free Tier</span>
-              ) : isCancelling ? (
-                <span style={{ color: "#f59e0b", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#f59e0b" }} /> Cancelling
-                </span>
-              ) : status?.isActive ? (
-                <span style={{ color: "var(--brand)", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--brand)" }} /> Active
-                </span>
-              ) : (
-                <span style={{ color: "#ef4444", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#ef4444" }} /> Inactive
-                </span>
-              )
-            }
-          />
-          <Row label="Billing Cycle" value={isFree ? "—" : "Monthly"} />
-          <Row label={isFree ? "Next Renewal" : dateRowLabel} value={isFree ? "—" : (dateRowValue || "—")} />
-          <Row
-            label="Days Remaining"
-            value={
-              isFree ? (
-                "—"
-              ) : (
-                <span style={{ color: "var(--brand)", fontWeight: "700" }}>
-                  {status?.daysLeft != null ? `${status.daysLeft} ${status.daysLeft === 1 ? "Day" : "Days"}` : "—"}
-                </span>
-              )
-            }
-          />
-        </div>
-
-
-        {/* Manage Billing Button */}
-        {!isFree && (
-          <button
-            className="btn btn-block"
-            style={{ height: "42px", borderRadius: "12px", background: "var(--c-bg-2)", border: "1px solid var(--c-border)", fontWeight: "700" }}
-            onClick={handleManageBilling}>
-            Manage Billing & Invoice
-          </button>
         )}
+
+        {/* Card 3: Grouped Menu Rows */}
+        <div className="v2-menu-group-card">
+          <button
+            type="button"
+            className="v2-menu-row"
+            onClick={() => onNavigateTab?.("help")}
+          >
+            <div className="v2-menu-row-left">
+              <div className="v2-menu-row-icon">
+                <HelpCircle size={16} strokeWidth={2} />
+              </div>
+              <span className="v2-menu-row-label">Help & FAQ</span>
+            </div>
+            <ChevronRight size={15} strokeWidth={2.2} className="v2-menu-row-chevron" />
+          </button>
+
+          <button
+            type="button"
+            className="v2-menu-row"
+            onClick={() => onNavigateTab?.("feedback")}
+          >
+            <div className="v2-menu-row-left">
+              <div className="v2-menu-row-icon">
+                <Star size={16} strokeWidth={2} />
+              </div>
+              <span className="v2-menu-row-label">Feedback & Preferences</span>
+            </div>
+            <ChevronRight size={15} strokeWidth={2.2} className="v2-menu-row-chevron" />
+          </button>
+
+          <button
+            type="button"
+            className="v2-menu-row"
+            onClick={() => onNavigateTab?.("legal")}
+          >
+            <div className="v2-menu-row-left">
+              <div className="v2-menu-row-icon">
+                <FileText size={16} strokeWidth={2} />
+              </div>
+              <span className="v2-menu-row-label">Legal & privacy</span>
+            </div>
+            <ChevronRight size={15} strokeWidth={2.2} className="v2-menu-row-chevron" />
+          </button>
+        </div>
+
+        {/* Footer */}
+        <div className="v2-trust-footer">
+          Payments are handled by Dodo Payments.
+        </div>
       </div>
-      <div className="pane-footer">
-        <a href="#" onClick={(e) => { e.preventDefault(); openExternal("https://explified.com/privacy-policy"); }}>Privacy</a> ·{" "}
-        <a href="#" onClick={(e) => { e.preventDefault(); openExternal("https://explified.com/terms-of-service"); }}>Terms</a> ·{" "}
-        <a href="#" onClick={(e) => { e.preventDefault(); openExternal("mailto:support@explified.com"); }}>Support</a>
-        <br />
-        Built by Explified
-      </div>
-    </>
+    </div>
   );
 }

@@ -319,14 +319,7 @@ export function HomeScreen() {
   };
 
   const handleProfileClick = () => {
-    dispatch(
-      addToast({
-        id: `toast_account_${Date.now()}`,
-        kind: "info",
-        title: "Account",
-        message: "Account screen will be built in Phase 3.",
-      })
-    );
+    dispatch(setSection("settings"));
   };
 
   const totalCount = stagedItems.length;
