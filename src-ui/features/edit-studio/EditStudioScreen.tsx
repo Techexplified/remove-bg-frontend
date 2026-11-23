@@ -158,26 +158,40 @@ export function EditStudioScreen() {
   };
 
   // ── Execute Removal: Erases highlighted selection area ──
-  const handleExecuteRemove = () => {
+  const handleExecuteRemove = async () => {
     if (!selectionMaskDataUrl) return;
 
-    const img1 = new Image();
-    img1.src = current.maskDataUrl || "";
-    const img2 = new Image();
-    img2.src = selectionMaskDataUrl;
-
+    const targetW = current.resize.width || 800;
+    const targetH = current.resize.height || 800;
     const mergeCanvas = document.createElement("canvas");
-    mergeCanvas.width = current.resize.width || 800;
-    mergeCanvas.height = current.resize.height || 800;
+    mergeCanvas.width = targetW;
+    mergeCanvas.height = targetH;
     const ctx = mergeCanvas.getContext("2d");
-    if (ctx) {
-      if (current.maskDataUrl) ctx.drawImage(img1, 0, 0);
-      ctx.drawImage(img2, 0, 0);
+    if (!ctx) return;
+
+    const loadImage = (src: string) =>
+      new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+      });
+
+    try {
+      if (current.maskDataUrl) {
+        const img1 = await loadImage(current.maskDataUrl);
+        ctx.drawImage(img1, 0, 0, targetW, targetH);
+      }
+      const img2 = await loadImage(selectionMaskDataUrl);
+      ctx.drawImage(img2, 0, 0, targetW, targetH);
+
       const newMask = mergeCanvas.toDataURL();
       pushSnapshot({
         ...current,
         maskDataUrl: newMask,
       });
+    } catch (e) {
+      console.error("Failed to merge erase mask", e);
     }
 
     setRemoveState((prev) => ({
@@ -199,7 +213,7 @@ export function EditStudioScreen() {
     const ctx = outCanvas.getContext("2d");
     if (!ctx) return null;
 
-    // 1. Draw Background Layer
+    // 1. Draw Background Layer onto outCanvas
     if (current.background.kind === "color" && current.background.color !== "transparent") {
       ctx.fillStyle = current.background.color;
       ctx.fillRect(0, 0, targetW, targetH);
@@ -246,7 +260,14 @@ export function EditStudioScreen() {
       });
     }
 
-    // 2. Filter String
+    // 2. Offscreen Foreground Canvas (isolates erase mask to foreground only)
+    const fgCanvas = document.createElement("canvas");
+    fgCanvas.width = targetW;
+    fgCanvas.height = targetH;
+    const fgCtx = fgCanvas.getContext("2d");
+    if (!fgCtx) return outCanvas;
+
+    // Filter & Tone Adjustments
     const filterCss = getFilterCss(current.filter.id, current.filter.strength);
     const b = typeof current.adjustments?.brightness === "number" ? current.adjustments.brightness : 100;
     const c = typeof current.adjustments?.contrast === "number" ? current.adjustments.contrast : 100;
@@ -264,15 +285,15 @@ export function EditStudioScreen() {
       adjCss && filterCss
         ? `${adjCss} ${filterCss}`
         : adjCss || filterCss || "none";
-    ctx.filter = combinedFilter;
+    fgCtx.filter = combinedFilter;
 
-    // 3. Draw Foreground Image
+    // 3. Draw Foreground Image onto fgCanvas
     await new Promise<void>((resolve) => {
       const fgImg = new Image();
       fgImg.crossOrigin = "anonymous";
       fgImg.src = editingImage.previewUrl;
       fgImg.onload = () => {
-        ctx.save();
+        fgCtx.save();
         const origW = fgImg.naturalWidth;
         const origH = fgImg.naturalHeight;
         const origRatio = origW / origH;
@@ -290,21 +311,21 @@ export function EditStudioScreen() {
             sx = (origW - sw) / 2;
           }
         }
-        ctx.drawImage(fgImg, sx, sy, sw, sh, 0, 0, targetW, targetH);
-        ctx.restore();
+        fgCtx.drawImage(fgImg, sx, sy, sw, sh, 0, 0, targetW, targetH);
+        fgCtx.restore();
         resolve();
       };
       fgImg.onerror = () => resolve();
     });
 
-    // 4. Draw Erase Mask if present
+    // 4. Draw Erase Mask on fgCanvas ONLY (erases foreground subject, NOT background)
     if (current.maskDataUrl) {
       await new Promise<void>((resolve) => {
         const maskImg = new Image();
         maskImg.src = current.maskDataUrl!;
         maskImg.onload = () => {
-          ctx.save();
-          ctx.globalCompositeOperation = "destination-out";
+          fgCtx.save();
+          fgCtx.globalCompositeOperation = "destination-out";
           const origW = maskImg.naturalWidth;
           const origH = maskImg.naturalHeight;
           const origRatio = origW / origH;
@@ -322,13 +343,16 @@ export function EditStudioScreen() {
               sx = (origW - sw) / 2;
             }
           }
-          ctx.drawImage(maskImg, sx, sy, sw, sh, 0, 0, targetW, targetH);
-          ctx.restore();
+          fgCtx.drawImage(maskImg, sx, sy, sw, sh, 0, 0, targetW, targetH);
+          fgCtx.restore();
           resolve();
         };
         maskImg.onerror = () => resolve();
       });
     }
+
+    // 5. Draw Foreground Layer on top of Background Layer on outCanvas
+    ctx.drawImage(fgCanvas, 0, 0, targetW, targetH);
 
     return outCanvas;
   }, [editingImage, current]);

@@ -54,11 +54,13 @@ export function EditCanvas({
   const [isDrawing, setIsDrawing] = useState(false);
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
   const bgImageRef = useRef<HTMLImageElement | null>(null);
+  const maskImageRef = useRef<HTMLImageElement | null>(null);
 
   // Load source foreground image and resolve natural dimensions immediately
   useEffect(() => {
     if (!previewUrl) {
       sourceImageRef.current = null;
+      maskImageRef.current = null;
       return;
     }
     const img = new Image();
@@ -70,6 +72,13 @@ export function EditCanvas({
       renderCanvas();
     };
   }, [previewUrl, onDimensionsResolved]);
+
+  // Synchronize mask image ref when maskDataUrl is cleared
+  useEffect(() => {
+    if (!maskDataUrl) {
+      maskImageRef.current = null;
+    }
+  }, [maskDataUrl]);
 
   // Render canvas composite
   const renderCanvas = useCallback(() => {
@@ -147,22 +156,38 @@ export function EditCanvas({
         ? `${adjCss} ${filterCss}`
         : adjCss || filterCss || "none";
 
-    // 3. Draw Foreground Image with Tone Adjustments & Filter
-    ctx.save();
-    ctx.filter = combinedFilter;
-    ctx.drawImage(img, 0, 0, w, h);
-    ctx.restore();
+    // 2. Offscreen Foreground Canvas (isolates erase mask to foreground only)
+    const fgCanvas = document.createElement("canvas");
+    fgCanvas.width = w;
+    fgCanvas.height = h;
+    const fgCtx = fgCanvas.getContext("2d");
+    if (!fgCtx) return;
 
-    // 4. Apply Mask if present (Erase Mask)
+    // 2a. Draw Foreground Image with Tone Adjustments & Filter
+    fgCtx.save();
+    fgCtx.filter = combinedFilter;
+    fgCtx.drawImage(img, 0, 0, w, h);
+    fgCtx.restore();
+
+    // 2b. Apply Erase Mask to Foreground ONLY (erases subject pixels, NOT the background)
     if (maskDataUrl) {
-      const maskImg = new Image();
-      maskImg.src = maskDataUrl;
-      maskImg.onload = () => {
-        ctx.save();
-        ctx.globalCompositeOperation = "destination-out";
-        ctx.drawImage(maskImg, 0, 0, w, h);
-        ctx.restore();
-      };
+      if (maskImageRef.current && maskImageRef.current.src === maskDataUrl) {
+        fgCtx.save();
+        fgCtx.globalCompositeOperation = "destination-out";
+        fgCtx.drawImage(maskImageRef.current, 0, 0, w, h);
+        fgCtx.restore();
+        ctx.drawImage(fgCanvas, 0, 0, w, h);
+      } else {
+        const maskImg = new Image();
+        maskImg.onload = () => {
+          maskImageRef.current = maskImg;
+          renderCanvas();
+        };
+        maskImg.src = maskDataUrl;
+        ctx.drawImage(fgCanvas, 0, 0, w, h);
+      }
+    } else {
+      ctx.drawImage(fgCanvas, 0, 0, w, h);
     }
   }, [imageDimensions, background, filter, adjustments, maskDataUrl]);
 
