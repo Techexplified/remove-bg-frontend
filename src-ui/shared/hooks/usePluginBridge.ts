@@ -108,7 +108,8 @@ export function usePluginBridge() {
   const exportSelectedImage = useCallback((): Promise<Uint8Array> =>
     new Promise((resolve, reject) => { pendingExport.current = { resolve, reject }; send({ type: "export-selected-image" }); }), []);
 
-  const insertResultImage = useCallback((bytes: Uint8Array) => send({ type: "insert-result-image", payload: bytes }), []);
+  const insertResultImage = useCallback((payload: Uint8Array | { bytes: Uint8Array; mode?: "new" | "replace"; nodeId?: string }) =>
+    send({ type: "insert-result-image", payload }), []);
   const requestPreview = useCallback(() => send({ type: "request-preview" }), []);
   const requestUserIdRetry = useCallback(() => send({ type: "request-user-id" }), []);
   const openExternal = useCallback((url: string) => send({ type: "open-external", payload: url }), []);

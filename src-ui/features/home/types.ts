@@ -1,5 +1,6 @@
 export interface SelectedImageItem {
   id: string;
+  nodeId?: string;
   name: string;
   previewUrl: string;
   source?: "canvas" | "upload";

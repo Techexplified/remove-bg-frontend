@@ -1,0 +1,599 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   RemoveBG V2 — Single Image Preview & Post-Cutout Stylesheet (RemoveBG-03, 04, 15b)
+   Fonts: Manrope (Headings / CTAs) + DM Sans (Body / Labels / Controls)
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Processing Modal (Ultra-clean, text + progress bar only) ── */
+.v2-proc-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  padding: 20px;
+  box-sizing: border-box;
+  animation: v2-fade-in 0.2s ease;
+}
+
+.v2-proc-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 28px 24px 24px;
+  width: 290px;
+  max-width: 90%;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.v2-proc-title {
+  font-family: "Manrope", sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.3px;
+  margin: 0 0 6px;
+}
+
+.v2-proc-sub {
+  font-family: "DM Sans", sans-serif;
+  font-size: 12px;
+  color: #64748b;
+  margin: 0 0 20px;
+  line-height: 1.45;
+  max-width: 250px;
+}
+
+.v2-proc-progress-track {
+  width: 100%;
+  height: 5px;
+  border-radius: 9999px;
+  background: #f1f5f9;
+  overflow: hidden;
+  position: relative;
+}
+
+.v2-proc-progress-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #ef7375, #141824);
+  animation: v2-beam-indeterminate 1.5s ease-in-out infinite;
+}
+
+@keyframes v2-beam-indeterminate {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+
+@keyframes v2-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+
+/* ── 2. Preview Screen Layout (RemoveBG-04) ── */
+.v2-preview-screen {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Header */
+.v2-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  height: 52px;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
+  z-index: 10;
+  box-sizing: border-box;
+}
+
+.v2-preview-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.v2-preview-title {
+  font-family: "Manrope", sans-serif;
+  font-size: 16.5px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.3px;
+  margin: 0;
+}
+
+.v2-preview-credits-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 100px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-family: "Manrope", sans-serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.v2-preview-credits-icon {
+  color: #f59e0b;
+}
+
+/* Main Body */
+.v2-preview-body {
+  flex: 1;
+  min-height: 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* Canvas Card */
+.v2-preview-canvas-card {
+  flex: 1;
+  min-height: 260px;
+  background-color: #ffffff;
+  background-image: 
+    linear-gradient(45deg, #f1f5f9 25%, transparent 25%),
+    linear-gradient(-45deg, #f1f5f9 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #f1f5f9 75%),
+    linear-gradient(-45deg, transparent 75%, #f1f5f9 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+/* Preview Image Display */
+.v2-preview-image {
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
+  transition: opacity 0.15s ease;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Before / After Floating Segmented Pill */
+.v2-preview-toggle-wrap {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  padding: 3px;
+  border-radius: 100px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  z-index: 10;
+}
+
+.v2-preview-toggle-btn {
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
+  font-family: "Manrope", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 13px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.v2-preview-toggle-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+
+/* Notice Banner */
+.v2-preview-notice-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 9px 12px;
+  font-family: "DM Sans", sans-serif;
+  font-size: 11.5px;
+  color: #166534;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.v2-preview-notice-icon {
+  color: #16a34a;
+  flex-shrink: 0;
+}
+
+/* Bottom Action Footer */
+.v2-preview-action-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px 16px;
+  background: #ffffff;
+  border-top: 1px solid #f1f5f9;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+/* Row 1: Like Button (left) and Layer Mode Toggle (right, flex-end) */
+.v2-preview-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.v2-preview-feedback-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.v2-preview-feedback-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.v2-preview-feedback-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  transform: translateY(-1px);
+}
+
+/* Green state when Like is active */
+.v2-preview-feedback-btn.like-btn.active {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #059669;
+  box-shadow: 0 1px 4px rgba(16, 185, 129, 0.2);
+}
+
+.v2-preview-feedback-btn.like-btn.active:hover {
+  background: #d1fae5;
+  border-color: #059669;
+}
+
+/* Red state when Dislike is active */
+.v2-preview-feedback-btn.dislike-btn.active {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #dc2626;
+  box-shadow: 0 1px 4px rgba(239, 68, 68, 0.2);
+}
+
+.v2-preview-feedback-btn.dislike-btn.active:hover {
+  background: #fee2e2;
+  border-color: #dc2626;
+}
+
+.v2-preview-layer-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 9px;
+  border: 1px solid #e2e8f0;
+}
+
+.v2-layer-mode-btn {
+  background: transparent;
+  border: none;
+  font-family: "Manrope", sans-serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748b;
+  padding: 5px 13px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.v2-layer-mode-btn:hover:not(:disabled) {
+  color: #0f172a;
+}
+
+.v2-layer-mode-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.v2-layer-mode-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Row 2: Edit & Apply Buttons (Strict 50/50 Equal Widths) */
+.v2-preview-buttons-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.v2-preview-edit-btn {
+  width: 100%;
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  color: #0f172a;
+  font-family: "Manrope", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.v2-preview-edit-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.v2-preview-apply-btn {
+  width: 100%;
+  height: 42px;
+  border-radius: 12px;
+  background: #0f172a;
+  border: 1.5px solid transparent;
+  color: #ffffff;
+  font-family: "Manrope", sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
+  box-sizing: border-box;
+}
+
+.v2-preview-apply-btn:hover:not(:disabled) {
+  background: #1e293b;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.22);
+}
+
+.v2-preview-apply-btn:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+
+/* ── 3. Figma Community Modal (RemoveBG-15b) ── */
+.v2-community-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  animation: v2-fade-in 0.2s ease;
+  box-sizing: border-box;
+}
+
+.v2-community-sheet {
+  width: 100%;
+  background: #ffffff;
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  padding: 24px 20px 20px;
+  box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-sizing: border-box;
+  animation: v2-slide-up 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.v2-community-sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: #e2e8f0;
+  margin-bottom: 14px;
+}
+
+.v2-community-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #059669;
+  margin-bottom: 10px;
+}
+
+.v2-community-title {
+  font-family: "Manrope", sans-serif;
+  font-size: 19px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.3px;
+  margin: 0 0 6px;
+}
+
+.v2-community-desc {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.45;
+  margin: 0 0 16px;
+  max-width: 280px;
+}
+
+.v2-community-plugin-card {
+  width: 100%;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+}
+
+.v2-community-card-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+
+.v2-community-plugin-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Manrope", sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.v2-community-plugin-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.v2-community-plugin-name {
+  font-family: "Manrope", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.v2-community-plugin-author {
+  font-size: 10.5px;
+  color: #64748b;
+}
+
+.v2-community-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #94a3b8;
+}
+
+.v2-community-like-cta {
+  width: 100%;
+  height: 42px;
+  border-radius: 12px;
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  font-family: "Manrope", sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
+  margin-bottom: 10px;
+}
+
+.v2-community-like-cta:hover {
+  background: #1e293b;
+  transform: translateY(-1px);
+}
+
+.v2-community-dismiss-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-family: "DM Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 12px;
+  transition: color 0.15s ease;
+}
+
+.v2-community-dismiss-btn:hover {
+  color: #0f172a;
+}
+
+@keyframes v2-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}

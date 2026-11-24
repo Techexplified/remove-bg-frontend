@@ -1,13 +1,20 @@
 import { useRef, useState, useCallback } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
-import { addToast, setSection } from "../../app/slices/uiSlice";
-import { setEditingImage } from "../../app/slices/figmaSlice";
+import { addToast, setSection, setPreviewReturnSection } from "../../app/slices/uiSlice";
+import {
+  setEditingImage,
+  setOriginalUrl,
+  setPreviewUrl,
+  setUploadedImage,
+  setBatchResultItems,
+} from "../../app/slices/figmaSlice";
 import { usePluginBridgeContext } from "../../shared/context/PluginBridgeContext";
 import { HomeHeader } from "./components/HomeHeader";
 import { HomeEmptyState } from "./components/HomeEmptyState";
 import { HomeSinglePreview } from "./components/HomeSinglePreview";
 import { HomeMultiPreviewGrid } from "./components/HomeMultiPreviewGrid";
 import { HomeActionBar } from "./components/HomeActionBar";
+import { ProcessingModal } from "../preview/components/ProcessingModal";
 import type { SelectedImageItem, HomeViewMode } from "./types";
 import "../../shared/styles/v2/home.css";
 
@@ -32,6 +39,10 @@ export function HomeScreen() {
   const [stagedItems, setStagedItems] = useState<SelectedImageItem[]>([]);
   const stagedItemsRef = useRef(stagedItems);
   stagedItemsRef.current = stagedItems;
+
+  // Processing state for single image simulation
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingThumb, setProcessingThumb] = useState<string | null>(null);
 
   // ── Explicit Insert From Figma Canvas ──
   // User selects layer(s) on canvas and clicks "Insert from canvas"
@@ -93,6 +104,7 @@ export function HomeScreen() {
               ...prev,
               {
                 id: canvasId,
+                nodeId: selection.id,
                 name: layerName,
                 previewUrl: dedicatedUrl,
                 source: "canvas",
@@ -143,6 +155,7 @@ export function HomeScreen() {
             const blob = new Blob([b.bytes as unknown as BlobPart], { type: "image/png" });
             return {
               id: `canvas_${b.id}_${Date.now()}`,
+              nodeId: b.id,
               name: b.name,
               previewUrl: URL.createObjectURL(blob),
               source: "canvas",
@@ -277,14 +290,58 @@ export function HomeScreen() {
 
   // ── Action Handlers ──
   const handleRemoveBgClick = () => {
-    dispatch(
-      addToast({
-        id: `toast_remove_${Date.now()}`,
-        kind: "info",
-        title: "Phase 1 UI Ready",
-        message: `Removing background for ${stagedItems.length} images will be wired in Phase 4.`,
-      })
-    );
+    if (stagedItems.length === 0) return;
+
+    if (stagedItems.length === 1) {
+      const item = stagedItems[0];
+      setProcessingThumb(item.previewUrl);
+      setIsProcessing(true);
+
+      dispatch(setOriginalUrl(item.previewUrl));
+      dispatch(setPreviewUrl(item.previewUrl));
+      dispatch(setPreviewReturnSection("features"));
+      dispatch(
+        setUploadedImage({
+          name: item.name,
+          previewUrl: item.previewUrl,
+          bytes: item.bytes || new Uint8Array(),
+          width: item.width,
+          height: item.height,
+          originalPreviewUrl: item.previewUrl,
+          originalBytes: item.bytes || new Uint8Array(),
+          source: item.source || "upload",
+          nodeId: item.nodeId,
+        })
+      );
+
+      setTimeout(() => {
+        setIsProcessing(false);
+        dispatch(setSection("preview"));
+      }, 2300);
+      return;
+    }
+
+    if (stagedItems.length >= 2) {
+      dispatch(
+        setBatchResultItems(
+          stagedItems.map((item) => ({
+            id: item.id,
+            nodeId: item.nodeId,
+            name: item.name,
+            previewUrl: item.previewUrl,
+            bytes: item.bytes || new Uint8Array(),
+            width: item.width,
+            height: item.height,
+            source: item.source || "upload",
+            status: "waiting",
+            resultUrl: item.previewUrl,
+            resultBytes: item.bytes,
+          }))
+        )
+      );
+      dispatch(setSection("batch_results"));
+      return;
+    }
   };
 
   const handleEditClick = () => {
@@ -398,6 +455,12 @@ export function HomeScreen() {
           onEditClick={handleEditClick}
         />
       </footer>
+
+      {/* V2 Indeterminate Processing Modal Overlay */}
+      <ProcessingModal
+        isOpen={isProcessing}
+        previewThumbUrl={processingThumb}
+      />
     </div>
   );
 }

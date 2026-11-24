@@ -16,9 +16,11 @@ import { FeaturePreviewModal } from "./shared/components/modals/FeaturePreviewMo
 import { BgStudioGatewayModal } from "./shared/components/modals/BgStudioGatewayModal";
 import { HomeScreen } from "./features/home/HomeScreen";
 // import { FeaturesScreen } from "./features/features-screen/FeaturesScreen";
+import { PreviewScreen } from "./features/preview/PreviewScreen";
 import { ToolboxScreen } from "./features/toolbox/ToolboxScreen";
 import { SettingsScreen } from "./features/settings/SettingsScreen";
 import { BatchProcessScreen } from "./features/batch/BatchProcessScreen";
+import { BatchResultsScreen } from "./features/batch/BatchResultsScreen";
 import { ResizeExportScreen } from "./features/resize-export/ResizeExportScreen";
 import { BackgroundStudioScreen } from "./features/background-studio/BackgroundStudioScreen";
 import { EditStudioScreen } from "./features/edit-studio/EditStudioScreen";
@@ -413,6 +415,9 @@ function AppReady() {
           {activeSection === "features" && (
             <HomeScreen />
           )}
+          {activeSection === "preview" && (
+            <PreviewScreen />
+          )}
           {activeSection === "edit_studio" && (
             <EditStudioScreen />
           )}
@@ -429,6 +434,7 @@ function AppReady() {
           )}
           {activeSection === "settings" && <SettingsScreen />}
           {activeSection === "batch" && <BatchProcessScreen />}
+          {activeSection === "batch_results" && <BatchResultsScreen />}
           {activeSection === "resize_export" && <ResizeExportScreen />}
           {activeSection === "background_studio" && (
             <BackgroundStudioScreen

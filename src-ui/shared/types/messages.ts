@@ -19,7 +19,7 @@ export type UIToPluginMessage =
   | { type: "request-user-id" }
   | { type: "request-preview" }
   | { type: "export-selected-image" }
-  | { type: "insert-result-image"; payload: Uint8Array }
+  | { type: "insert-result-image"; payload: Uint8Array | { bytes: Uint8Array; mode?: "new" | "replace"; nodeId?: string } }
   | { type: "export-selection-batch" }
   | { type: "insert-batch-result-images"; items: Array<{ name: string; bytes: Uint8Array }> }
   | { type: "list-selection" }

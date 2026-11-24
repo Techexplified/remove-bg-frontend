@@ -162,9 +162,52 @@ figma.ui.onmessage = async (msg: { type: string;[k: string]: unknown }) => {
     }
 
     case "insert-result-image": {
-      const bytes = msg.payload as Uint8Array;
+      let bytes: Uint8Array;
+      let mode: "new" | "replace" = "new";
+      let nodeId: string | undefined;
+
+      if (msg.payload instanceof Uint8Array) {
+        bytes = msg.payload;
+      } else {
+        const data = msg.payload as { bytes: Uint8Array; mode?: "new" | "replace"; nodeId?: string };
+        bytes = data.bytes;
+        mode = data.mode || "new";
+        nodeId = data.nodeId;
+      }
+
       try {
         const img = figma.createImage(bytes);
+
+        // If replace mode, replace the image fill on the target layer (by nodeId or active selection)
+        if (mode === "replace") {
+          let node: SceneNode | null = null;
+          if (nodeId) {
+            if ("getNodeByIdAsync" in figma) {
+              node = (await (figma as any).getNodeByIdAsync(nodeId)) as SceneNode | null;
+            } else {
+              node = (figma as any).getNodeById(nodeId) as SceneNode | null;
+            }
+          }
+          if (!node && figma.currentPage.selection.length > 0) {
+            node = figma.currentPage.selection[0];
+          }
+
+          if (node && "fills" in node) {
+            const fgFill: ImagePaint = { type: "IMAGE", imageHash: img.hash, scaleMode: "FILL" };
+            node.fills = [fgFill];
+            if ("setPluginData" in node) {
+              node.setPluginData("removebg_fg_hash", img.hash);
+            }
+            figma.currentPage.selection = [node];
+            figma.viewport.scrollAndZoomIntoView([node]);
+            figma.notify("Replaced layer with background-removed result.");
+            figma.ui.postMessage({ type: "insert-success" });
+            void pushPreview();
+            break;
+          }
+        }
+
+        // Standard new layer placement
         const { width, height } = await img.getSizeAsync();
         const rect = figma.createRectangle();
         rect.resize(width, height);
@@ -176,6 +219,7 @@ figma.ui.onmessage = async (msg: { type: string;[k: string]: unknown }) => {
         figma.currentPage.appendChild(rect);
         figma.currentPage.selection = [rect];
         figma.viewport.scrollAndZoomIntoView([rect]);
+        figma.notify("Added to canvas as new layer.");
         figma.ui.postMessage({ type: "insert-success" });
         void pushPreview();
       } catch (e) { figma.notify(e instanceof Error ? e.message : "Couldn't place result."); }

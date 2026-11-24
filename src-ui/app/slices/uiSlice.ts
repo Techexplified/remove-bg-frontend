@@ -20,6 +20,7 @@ interface UIState {
   checkoutOverlay: CheckoutOverlay;
   sessionUseCount: number;  // tracks successful feature uses this session (for review prompt)
   showExitIntent: boolean;  // set true when paywall dismissed without upgrade
+  previewReturnSection?: SectionId;
 }
 
 const initialState: UIState = {
@@ -33,6 +34,7 @@ const initialState: UIState = {
   checkoutOverlay: { visible: false, type: "topup", stage: "verifying" },
   sessionUseCount: 0,
   showExitIntent: false,
+  previewReturnSection: "features",
 };
 
 const uiSlice = createSlice({
@@ -55,8 +57,24 @@ const uiSlice = createSlice({
     },
     incrementUseCount: (s) => { s.sessionUseCount += 1; },
     setShowExitIntent: (s, a: PayloadAction<boolean>) => { s.showExitIntent = a.payload; },
+    setPreviewReturnSection: (s, a: PayloadAction<SectionId | undefined>) => {
+      s.previewReturnSection = a.payload;
+    },
   },
 });
 
-export const { setSection, setAIFeature, openModal, closeModal, setProcessing, addToast, removeToast, setLastRun, setCheckoutOverlay, incrementUseCount, setShowExitIntent } = uiSlice.actions;
+export const {
+  setSection,
+  setAIFeature,
+  openModal,
+  closeModal,
+  setProcessing,
+  addToast,
+  removeToast,
+  setLastRun,
+  setCheckoutOverlay,
+  incrementUseCount,
+  setShowExitIntent,
+  setPreviewReturnSection,
+} = uiSlice.actions;
 export default uiSlice.reducer;

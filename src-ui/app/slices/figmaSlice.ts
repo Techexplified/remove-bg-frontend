@@ -9,6 +9,8 @@ export interface UploadedImageInfo {
   height?: number;
   originalPreviewUrl?: string;
   originalBytes?: Uint8Array;
+  source?: "canvas" | "upload";
+  nodeId?: string;
 }
 
 export interface EditingImageInfo {
@@ -18,6 +20,21 @@ export interface EditingImageInfo {
   width?: number;
   height?: number;
   bytes?: Uint8Array;
+}
+
+export interface BatchResultItem {
+  id: string;
+  nodeId?: string;
+  name: string;
+  previewUrl: string;
+  bytes: Uint8Array;
+  width?: number;
+  height?: number;
+  source?: "canvas" | "upload";
+  status: "waiting" | "processing" | "done" | "error";
+  resultUrl?: string;
+  resultBytes?: Uint8Array;
+  errorMessage?: string;
 }
 
 interface FigmaState {
@@ -31,6 +48,7 @@ interface FigmaState {
   uploadedImage: UploadedImageInfo | null;
   activeImageSource: "canvas" | "upload";
   editingImage: EditingImageInfo | null;
+  batchResultItems: BatchResultItem[];
 }
 
 const CACHED_USER_ID_KEY = "removebg_cached_user_id";
@@ -65,6 +83,7 @@ const initialState: FigmaState = {
   uploadedImage: null,
   activeImageSource: "canvas",
   editingImage: null,
+  batchResultItems: [],
 };
 
 const figmaSlice = createSlice({
@@ -94,42 +113,25 @@ const figmaSlice = createSlice({
       const prevId = s.selection.hasSelection ? s.selection.id : undefined;
       const nextId = a.payload.hasSelection ? a.payload.id : undefined;
 
-      // If selection was cleared or switched to a different layer, reset canvas originalUrl
-      if (!a.payload.hasSelection || (prevId && nextId && prevId !== nextId)) {
-        if (s.originalUrl && s.originalUrl.startsWith("blob:")) {
-          try { URL.revokeObjectURL(s.originalUrl); } catch { /* ignore */ }
-        }
+      // Only reset canvas originalUrl if there is no active uploaded/staged image
+      if (!s.uploadedImage && (!a.payload.hasSelection || (prevId && nextId && prevId !== nextId))) {
         s.originalUrl = null;
       }
 
       s.selection = a.payload;
-      if (a.payload.hasSelection) {
+      if (a.payload.hasSelection && !s.uploadedImage) {
         s.activeImageSource = "canvas";
       }
     },
     setPreviewUrl: (s, a: PayloadAction<string | null>) => { s.previewUrl = a.payload; },
 
-    // Fix #10 — revoke the old originalUrl blob URL before overwriting, to prevent memory leaks.
     setOriginalUrl: (s, a: PayloadAction<string | null>) => {
-      if (s.originalUrl && s.originalUrl.startsWith("blob:") && s.originalUrl !== a.payload) {
-        try { URL.revokeObjectURL(s.originalUrl); } catch { /* ignore */ }
-      }
       s.originalUrl = a.payload;
     },
     setImageFormat: (s, a: PayloadAction<string>) => {
       s.imageFormat = a.payload;
     },
     setUploadedImage: (s, a: PayloadAction<UploadedImageInfo | null>) => {
-      if (s.uploadedImage?.previewUrl && s.uploadedImage.previewUrl.startsWith("blob:")) {
-        try { URL.revokeObjectURL(s.uploadedImage.previewUrl); } catch { /* ignore */ }
-      }
-      if (
-        s.uploadedImage?.originalPreviewUrl &&
-        s.uploadedImage.originalPreviewUrl !== s.uploadedImage.previewUrl &&
-        s.uploadedImage.originalPreviewUrl.startsWith("blob:")
-      ) {
-        try { URL.revokeObjectURL(s.uploadedImage.originalPreviewUrl); } catch { /* ignore */ }
-      }
       s.uploadedImage = a.payload;
       if (a.payload) {
         s.activeImageSource = "upload";
@@ -157,6 +159,27 @@ const figmaSlice = createSlice({
     setEditingImage: (s, a: PayloadAction<EditingImageInfo | null>) => {
       s.editingImage = a.payload;
     },
+    setBatchResultItems: (s, a: PayloadAction<BatchResultItem[]>) => {
+      s.batchResultItems = a.payload;
+    },
+    updateBatchResultItemStatus: (
+      s,
+      a: PayloadAction<{
+        id: string;
+        status: "waiting" | "processing" | "done" | "error";
+        resultUrl?: string;
+        resultBytes?: Uint8Array;
+        errorMessage?: string;
+      }>
+    ) => {
+      const item = s.batchResultItems.find((i) => i.id === a.payload.id);
+      if (item) {
+        item.status = a.payload.status;
+        if (a.payload.resultUrl) item.resultUrl = a.payload.resultUrl;
+        if (a.payload.resultBytes) item.resultBytes = a.payload.resultBytes;
+        if (a.payload.errorMessage) item.errorMessage = a.payload.errorMessage;
+      }
+    },
   },
 });
 
@@ -170,5 +193,7 @@ export const {
   setActiveImageSource,
   clearUploadedImage,
   setEditingImage,
+  setBatchResultItems,
+  updateBatchResultItemStatus,
 } = figmaSlice.actions;
 export default figmaSlice.reducer;

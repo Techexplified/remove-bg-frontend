@@ -10,6 +10,7 @@
 
 import { createContext, useContext, useEffect, useRef, useCallback, type ReactNode } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
+import { store } from "../../app/store";
 import { setUserIdentity, setSelection, setPreviewUrl, setOriginalUrl, setImageFormat } from "../../app/slices/figmaSlice";
 import { detectImageFormat } from "../utils/imageFormat";
 import { setPlanStatus } from "../../app/slices/statusSlice";
@@ -24,7 +25,7 @@ let reqCounter = 0;
 
 export interface PluginBridge {
   exportSelectedImage: () => Promise<Uint8Array>;
-  insertResultImage: (bytes: Uint8Array) => void;
+  insertResultImage: (payload: Uint8Array | { bytes: Uint8Array; mode?: "new" | "replace"; nodeId?: string }) => void;
   requestPreview: () => void;
   requestUserIdRetry: () => void;
   openExternal: (url: string) => void;
@@ -95,6 +96,12 @@ export function PluginBridgeProvider({ children }: { children: ReactNode }) {
           break;
 
         case "preview-update": {
+          const currentSection = store.getState().ui.activeSection;
+          // Never overwrite preview while user is actively reviewing a result, editing, or viewing batch results
+          if (currentSection === "preview" || currentSection === "edit_studio" || currentSection === "batch_results") {
+            break;
+          }
+
           // Revoke old blob URL to prevent memory leaks
           if (prevUrlRef.current) { URL.revokeObjectURL(prevUrlRef.current); prevUrlRef.current = null; }
           if (msg.payload) {
@@ -174,8 +181,8 @@ export function PluginBridgeProvider({ children }: { children: ReactNode }) {
       send({ type: "export-selected-image" });
     }), []);
 
-  const insertResultImage = useCallback((bytes: Uint8Array) =>
-    send({ type: "insert-result-image", payload: bytes }), []);
+  const insertResultImage = useCallback((payload: Uint8Array | { bytes: Uint8Array; mode?: "new" | "replace"; nodeId?: string }) =>
+    send({ type: "insert-result-image", payload }), []);
 
   const requestPreview = useCallback(() => send({ type: "request-preview" }), []);
   const requestUserIdRetry = useCallback(() => send({ type: "request-user-id" }), []);
