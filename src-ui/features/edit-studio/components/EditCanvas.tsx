@@ -253,8 +253,8 @@ export function EditCanvas({
     }
   }, [imageDimensions, selectionMaskDataUrl]);
 
-  // Brush is active ONLY when in Remove tab
-  const isRemoveBrushActive = activeTab === "remove";
+  // Brush is active ONLY when in Magic Brush tab
+  const isRemoveBrushActive = activeTab === "magic_brush";
 
   const updateCursorPos = (e: React.MouseEvent) => {
     if (!isRemoveBrushActive) return;

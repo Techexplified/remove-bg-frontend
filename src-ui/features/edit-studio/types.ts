@@ -1,4 +1,4 @@
-export type EditTab = "refine" | "remove" | "background" | "filters" | "resize";
+export type EditTab = "refine" | "magic_brush" | "background" | "filters" | "resize";
 
 export interface RefineAdjustments {
   brightness: number; // 0 to 200, default 100

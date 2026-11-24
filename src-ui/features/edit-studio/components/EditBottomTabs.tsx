@@ -16,9 +16,9 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { id: "refine", label: "Refine", icon: Edit3, isPaid: false },
-  { id: "remove", label: "Remove", icon: Wand2, isPaid: false },
-  { id: "background", label: "Background", icon: Layers, isPaid: true },
+  { id: "magic_brush", label: "Magic Brush", icon: Wand2, isPaid: false },
   { id: "filters", label: "Filters", icon: SlidersHorizontal, isPaid: false },
+  { id: "background", label: "Background", icon: Layers, isPaid: true },
   { id: "resize", label: "Resize", icon: Crop, isPaid: true },
 ];
 

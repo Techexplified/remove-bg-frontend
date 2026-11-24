@@ -594,7 +594,7 @@ export function EditStudioScreen() {
           />
         )}
 
-        {activeTab === "remove" && (
+        {activeTab === "magic_brush" && (
           <RemoveTab
             state={removeState}
             onStateChange={setRemoveState}
