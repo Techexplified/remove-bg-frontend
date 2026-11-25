@@ -17,6 +17,9 @@ import {
   updateBatchResultItemStatus,
   type BatchResultItem,
 } from "../../app/slices/figmaSlice";
+import { runFeature } from "../../shared/api/client";
+import { removeBackgroundLocal } from "../../shared/utils/fallbackRemoval";
+import { refundCredits } from "../../app/slices/statusSlice";
 import { usePluginBridgeContext } from "../../shared/context/PluginBridgeContext";
 import { exportBatchAsZip } from "./utils/zipExporter";
 import "../../shared/styles/v2/batch_results.css";
@@ -37,37 +40,89 @@ export function BatchResultsScreen() {
     ? 3
     : status.credits + (plan === "pro" ? status.topupCreditsPro : status.topupCreditsStarter);
 
-  // ── Realistic Staggered Processing Simulation ──
+  // ── Concurrent Processing Worker Queue (Max 2 Parallel) ──
   const processingInitiatedRef = useRef(false);
 
   useEffect(() => {
     if (processingInitiatedRef.current) return;
+    const itemsToProcess = batchResultItems.filter((i) => i.status === "waiting");
+    if (itemsToProcess.length === 0) return;
     processingInitiatedRef.current = true;
 
-    batchResultItems.forEach((item, idx) => {
-      // Step 1: Transition to processing
-      setTimeout(() => {
-        dispatch(
-          updateBatchResultItemStatus({
-            id: item.id,
-            status: "processing",
-          })
-        );
-      }, idx * 300);
+    let cancelled = false;
+    const CONCURRENCY = 2;
+    let nextIndex = 0;
 
-      // Step 2: Transition to done
-      setTimeout(() => {
+    async function processItem(item: BatchResultItem) {
+      if (cancelled) return;
+
+      dispatch(
+        updateBatchResultItemStatus({
+          id: item.id,
+          status: "processing",
+        })
+      );
+
+      try {
+        let inputBytes = item.bytes;
+        if (!inputBytes || inputBytes.length === 0) {
+          const resp = await fetch(item.previewUrl);
+          inputBytes = new Uint8Array(await resp.arrayBuffer());
+        }
+
+        let cutoutBytes: Uint8Array;
+        if (status?.credits && status.credits < 1 && status.plan === "pro") {
+          cutoutBytes = await removeBackgroundLocal(inputBytes);
+        } else {
+          cutoutBytes = await runFeature("remove_bg_basic", inputBytes);
+        }
+
+        if (cancelled) return;
+
+        const blob = new Blob([cutoutBytes as unknown as BlobPart], { type: "image/png" });
+        const resultUrl = URL.createObjectURL(blob);
+
         dispatch(
           updateBatchResultItemStatus({
             id: item.id,
             status: "done",
-            resultUrl: item.previewUrl,
-            resultBytes: item.bytes,
+            resultUrl,
+            resultBytes: cutoutBytes,
           })
         );
-      }, 1000 + idx * 800);
-    });
-  }, [batchResultItems, dispatch]);
+      } catch (err) {
+        if (cancelled) return;
+        console.error(`Error processing batch item ${item.name}:`, err);
+        // Refund credit for this failed item
+        dispatch(refundCredits(1));
+        dispatch(
+          updateBatchResultItemStatus({
+            id: item.id,
+            status: "error",
+            errorMessage: err instanceof Error ? err.message : "Processing failed",
+          })
+        );
+      }
+    }
+
+    async function worker() {
+      while (nextIndex < itemsToProcess.length && !cancelled) {
+        const item = itemsToProcess[nextIndex++];
+        await processItem(item);
+      }
+    }
+
+    const workers = Array.from(
+      { length: Math.min(CONCURRENCY, itemsToProcess.length) },
+      () => worker()
+    );
+
+    Promise.all(workers);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [batchResultItems, dispatch, status]);
 
   const totalCount = batchResultItems.length;
   const isAllComplete =

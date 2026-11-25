@@ -1,6 +1,9 @@
 import { useRef, useState, useCallback } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
-import { addToast, setSection, setPreviewReturnSection } from "../../app/slices/uiSlice";
+import { addToast, setSection, setPreviewReturnSection, openModal } from "../../app/slices/uiSlice";
+import { deductCredits, refundCredits } from "../../app/slices/statusSlice";
+import { runFeature, ApiError } from "../../shared/api/client";
+import { removeBackgroundLocal } from "../../shared/utils/fallbackRemoval";
 import {
   setEditingImage,
   setOriginalUrl,
@@ -293,35 +296,108 @@ export function HomeScreen() {
     if (stagedItems.length === 0) return;
 
     if (stagedItems.length === 1) {
+      if (spendable < 1) {
+        if (status?.plan === "free") {
+          dispatch(openModal({ kind: "plan_picker" }));
+        } else {
+          dispatch(openModal({ kind: "topup" }));
+        }
+        dispatch(
+          addToast({
+            id: `toast_nocredits_${Date.now()}`,
+            kind: "warning",
+            title: "Out of credits",
+            message: "Upgrade to Starter or Pro to continue removing backgrounds.",
+          })
+        );
+        return;
+      }
+
       const item = stagedItems[0];
       setProcessingThumb(item.previewUrl);
       setIsProcessing(true);
 
-      dispatch(setOriginalUrl(item.previewUrl));
-      dispatch(setPreviewUrl(item.previewUrl));
-      dispatch(setPreviewReturnSection("features"));
-      dispatch(
-        setUploadedImage({
-          name: item.name,
-          previewUrl: item.previewUrl,
-          bytes: item.bytes || new Uint8Array(),
-          width: item.width,
-          height: item.height,
-          originalPreviewUrl: item.previewUrl,
-          originalBytes: item.bytes || new Uint8Array(),
-          source: item.source || "upload",
-          nodeId: item.nodeId,
-        })
-      );
+      // Optimistically deduct 1 credit immediately so UI reflects consumption without delay
+      dispatch(deductCredits(1));
 
-      setTimeout(() => {
-        setIsProcessing(false);
-        dispatch(setSection("preview"));
-      }, 2300);
+      (async () => {
+        try {
+          let inputBytes = item.bytes;
+          if (!inputBytes || inputBytes.length === 0) {
+            const resp = await fetch(item.previewUrl);
+            inputBytes = new Uint8Array(await resp.arrayBuffer());
+          }
+
+          let cutoutBytes: Uint8Array;
+          if (status?.credits && status.credits < 1 && status.plan === "pro") {
+            cutoutBytes = await removeBackgroundLocal(inputBytes);
+          } else {
+            cutoutBytes = await runFeature("remove_bg_basic", inputBytes);
+          }
+
+          const blob = new Blob([cutoutBytes as unknown as BlobPart], { type: "image/png" });
+          const cutoutUrl = URL.createObjectURL(blob);
+
+          dispatch(setOriginalUrl(item.previewUrl));
+          dispatch(setPreviewUrl(cutoutUrl));
+          dispatch(setPreviewReturnSection("features"));
+          dispatch(
+            setUploadedImage({
+              name: item.name,
+              previewUrl: cutoutUrl,
+              bytes: cutoutBytes,
+              width: item.width,
+              height: item.height,
+              originalPreviewUrl: item.previewUrl,
+              originalBytes: inputBytes,
+              source: item.source || "upload",
+              nodeId: item.nodeId,
+            })
+          );
+
+          setIsProcessing(false);
+          dispatch(setSection("preview"));
+        } catch (err) {
+          console.error("Background removal failed:", err);
+          // Restore credit on failure
+          dispatch(refundCredits(1));
+          setIsProcessing(false);
+          const msg =
+            err instanceof ApiError ? err.message : "Failed to remove background. Please try again.";
+          dispatch(
+            addToast({
+              id: `toast_err_rem_${Date.now()}`,
+              kind: "error",
+              title: "Removal Failed",
+              message: msg,
+            })
+          );
+        }
+      })();
       return;
     }
 
     if (stagedItems.length >= 2) {
+      if (spendable < stagedItems.length) {
+        if (status?.plan === "free") {
+          dispatch(openModal({ kind: "plan_picker" }));
+        } else {
+          dispatch(openModal({ kind: "topup" }));
+        }
+        dispatch(
+          addToast({
+            id: `toast_nocredits_batch_${Date.now()}`,
+            kind: "warning",
+            title: "Not enough credits",
+            message: `You need ${stagedItems.length} credits to process this batch (you have ${spendable}).`,
+          })
+        );
+        return;
+      }
+
+      // Optimistically deduct batch credits immediately so the header counter updates instantly
+      dispatch(deductCredits(stagedItems.length));
+
       dispatch(
         setBatchResultItems(
           stagedItems.map((item) => ({
@@ -334,8 +410,8 @@ export function HomeScreen() {
             height: item.height,
             source: item.source || "upload",
             status: "waiting",
-            resultUrl: item.previewUrl,
-            resultBytes: item.bytes,
+            resultUrl: undefined,
+            resultBytes: undefined,
           }))
         )
       );

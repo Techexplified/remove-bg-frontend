@@ -107,6 +107,12 @@ const statusSlice = createSlice({
         saveCachedPlanStatus(s.data);
       }
     },
+    refundCredits: (s, a: PayloadAction<number>) => {
+      if (s.data) {
+        s.data.credits += a.payload;
+        saveCachedPlanStatus(s.data);
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -116,6 +122,23 @@ const statusSlice = createSlice({
       })
       .addCase(loadPlanStatus.fulfilled, (s, a) => {
         s.loading = false;
+        if (s.data && a.payload && s.data.plan === a.payload.plan) {
+          const localTotal =
+            s.data.credits +
+            (s.data.plan === "pro" ? s.data.topupCreditsPro : s.data.topupCreditsStarter);
+          const serverTotal =
+            a.payload.credits +
+            (a.payload.plan === "pro" ? a.payload.topupCreditsPro : a.payload.topupCreditsStarter);
+          // Prevent stale server responses from rubber-banding recently deducted credits
+          if (serverTotal > localTotal) {
+            a.payload.credits = s.data.credits;
+            if (s.data.plan === "pro") {
+              a.payload.topupCreditsPro = s.data.topupCreditsPro;
+            } else {
+              a.payload.topupCreditsStarter = s.data.topupCreditsStarter;
+            }
+          }
+        }
         s.data = a.payload;
         saveCachedPlanStatus(a.payload);
       })
@@ -135,5 +158,5 @@ const statusSlice = createSlice({
   },
 });
 
-export const { setPlanStatus, deductCredits } = statusSlice.actions;
+export const { setPlanStatus, deductCredits, refundCredits } = statusSlice.actions;
 export default statusSlice.reducer;
