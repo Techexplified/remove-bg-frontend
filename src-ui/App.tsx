@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Provider } from "react-redux";
 import { store } from "./app/store";
 import { useAppDispatch, useAppSelector } from "./app/hooks";
-import { setProcessing, addToast, setLastRun, setCheckoutOverlay, incrementUseCount, setSection } from "./app/slices/uiSlice";
+import { setProcessing, addToast, setLastRun, setCheckoutOverlay, incrementUseCount, setSection, openModal } from "./app/slices/uiSlice";
 import { CheckoutOverlay } from "./shared/components/CheckoutOverlay";
 import { ProcessingOverlay } from "./shared/components/ProcessingOverlay";
 import { ToastStack } from "./shared/components/toasts/ToastStack";
@@ -97,6 +97,18 @@ function AppReady() {
 
   const spendable = !status ? 0
     : status.credits + (status.plan === "pro" ? status.topupCreditsPro : status.topupCreditsStarter);
+
+  // Auto-open Out of Credits modal on plugin launch if free user has 0 credits
+  const hasAutoOpenedModalRef = useRef(false);
+  useEffect(() => {
+    if (!status) return;
+    if (!hasAutoOpenedModalRef.current) {
+      if (status.plan === "free" && spendable === 0) {
+        hasAutoOpenedModalRef.current = true;
+        dispatch(openModal({ kind: "plan_picker", context: "out_of_credits" }));
+      }
+    }
+  }, [status, spendable, dispatch]);
 
   const toast = useCallback((
     kind: "error" | "info" | "success" | "warning",

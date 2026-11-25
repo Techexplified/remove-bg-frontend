@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, type ChangeEvent } from "react";
+import { useState, useCallback, useRef, useEffect, type ChangeEvent } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { setSection, addToast, openModal } from "../../app/slices/uiSlice";
 import { setEditingImage } from "../../app/slices/figmaSlice";
@@ -64,6 +64,7 @@ export function EditStudioScreen() {
 
   const [selectionMaskDataUrl, setSelectionMaskDataUrl] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
+  const pendingActionRef = useRef<"apply" | "download">("apply");
 
   // Hidden file input for upload
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -117,7 +118,7 @@ export function EditStudioScreen() {
   };
 
   const handleUpgradeClick = () => {
-    dispatch(openModal({ kind: "plan_picker" }));
+    dispatch(openModal({ kind: "plan_picker", context: "upgrade" }));
   };
 
   // ── Switch / Clear Image (returns cleanly to empty state) ──
@@ -202,63 +203,66 @@ export function EditStudioScreen() {
   };
 
   // ── Composite Offscreen Canvas for Download or Apply ──
-  const renderCompositedCanvas = useCallback(async (): Promise<HTMLCanvasElement | null> => {
-    if (!editingImage?.previewUrl) return null;
+  const renderCompositedCanvas = useCallback(
+    async (stripPremium = false): Promise<HTMLCanvasElement | null> => {
+      if (!editingImage?.previewUrl) return null;
 
-    const outCanvas = document.createElement("canvas");
-    const targetW = current.resize.width || 800;
-    const targetH = current.resize.height || 800;
-    outCanvas.width = targetW;
-    outCanvas.height = targetH;
-    const ctx = outCanvas.getContext("2d");
-    if (!ctx) return null;
+      const outCanvas = document.createElement("canvas");
+      const targetW = (!stripPremium && current.resize.width) || editingImage.width || 800;
+      const targetH = (!stripPremium && current.resize.height) || editingImage.height || 800;
+      outCanvas.width = targetW;
+      outCanvas.height = targetH;
+      const ctx = outCanvas.getContext("2d");
+      if (!ctx) return null;
 
-    // 1. Draw Background Layer onto outCanvas
-    if (current.background.kind === "color" && current.background.color !== "transparent") {
-      ctx.fillStyle = current.background.color;
-      ctx.fillRect(0, 0, targetW, targetH);
-    } else if (current.background.kind === "gradient") {
-      const rad = (current.background.gradient.angle * Math.PI) / 180;
-      const cx = targetW / 2;
-      const cy = targetH / 2;
-      const len = Math.hypot(targetW, targetH) / 2;
-      const x0 = cx - Math.cos(rad) * len;
-      const y0 = cy - Math.sin(rad) * len;
-      const x1 = cx + Math.cos(rad) * len;
-      const y1 = cy + Math.sin(rad) * len;
+      // 1. Draw Background Layer onto outCanvas (only if not stripPremium)
+      if (!stripPremium) {
+        if (current.background.kind === "color" && current.background.color !== "transparent") {
+          ctx.fillStyle = current.background.color;
+          ctx.fillRect(0, 0, targetW, targetH);
+        } else if (current.background.kind === "gradient") {
+          const rad = (current.background.gradient.angle * Math.PI) / 180;
+          const cx = targetW / 2;
+          const cy = targetH / 2;
+          const len = Math.hypot(targetW, targetH) / 2;
+          const x0 = cx - Math.cos(rad) * len;
+          const y0 = cy - Math.sin(rad) * len;
+          const x1 = cx + Math.cos(rad) * len;
+          const y1 = cy + Math.sin(rad) * len;
 
-      const grad = ctx.createLinearGradient(x0, y0, x1, y1);
-      grad.addColorStop(0, current.background.gradient.start);
-      grad.addColorStop(1, current.background.gradient.end);
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, targetW, targetH);
-    } else if (current.background.kind === "image" && current.background.imageSrc) {
-      await new Promise<void>((resolve) => {
-        const bgImg = new Image();
-        bgImg.crossOrigin = "anonymous";
-        bgImg.src = current.background.imageSrc!;
-        bgImg.onload = () => {
-          const bgW = bgImg.naturalWidth;
-          const bgH = bgImg.naturalHeight;
-          const bgRatio = bgW / bgH;
-          const targetRatio = targetW / targetH;
-          let sx = 0,
-            sy = 0,
-            sw = bgW,
-            sh = bgH;
-          if (bgRatio > targetRatio) {
-            sw = bgH * targetRatio;
-            sx = (bgW - sw) / 2;
-          } else {
-            sh = bgW / targetRatio;
-            sy = (bgH - sh) / 2;
-          }
-          ctx.drawImage(bgImg, sx, sy, sw, sh, 0, 0, targetW, targetH);
-          resolve();
-        };
-        bgImg.onerror = () => resolve();
-      });
-    }
+          const grad = ctx.createLinearGradient(x0, y0, x1, y1);
+          grad.addColorStop(0, current.background.gradient.start);
+          grad.addColorStop(1, current.background.gradient.end);
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, targetW, targetH);
+        } else if (current.background.kind === "image" && current.background.imageSrc) {
+          await new Promise<void>((resolve) => {
+            const bgImg = new Image();
+            bgImg.crossOrigin = "anonymous";
+            bgImg.src = current.background.imageSrc!;
+            bgImg.onload = () => {
+              const bgW = bgImg.naturalWidth;
+              const bgH = bgImg.naturalHeight;
+              const bgRatio = bgW / bgH;
+              const targetRatio = targetW / targetH;
+              let sx = 0,
+                sy = 0,
+                sw = bgW,
+                sh = bgH;
+              if (bgRatio > targetRatio) {
+                sw = bgH * targetRatio;
+                sx = (bgW - sw) / 2;
+              } else {
+                sh = bgW / targetRatio;
+                sy = (bgH - sh) / 2;
+              }
+              ctx.drawImage(bgImg, sx, sy, sw, sh, 0, 0, targetW, targetH);
+              resolve();
+            };
+            bgImg.onerror = () => resolve();
+          });
+        }
+      }
 
     // 2. Offscreen Foreground Canvas (isolates erase mask to foreground only)
     const fgCanvas = document.createElement("canvas");
@@ -357,9 +361,68 @@ export function EditStudioScreen() {
     return outCanvas;
   }, [editingImage, current]);
 
-  // ── Download Handler ──
-  const handleDownload = async () => {
-    const canvas = await renderCompositedCanvas();
+  const hasCustomBackground =
+    (current.background.kind === "color" && current.background.color !== "transparent") ||
+    current.background.kind === "gradient" ||
+    (current.background.kind === "image" && !!current.background.imageSrc);
+
+  const hasCustomResize =
+    !!current.resize.preset ||
+    (current.resize.width !== (editingImage?.width || 800) ||
+      current.resize.height !== (editingImage?.height || 800));
+
+  const hasPremiumFeaturesActive = isFreePlan && (hasCustomBackground || hasCustomResize);
+
+  const performApply = async (stripPremium = false) => {
+    const canvas = await renderCompositedCanvas(stripPremium);
+    if (!canvas) return;
+
+    setIsApplying(true);
+    try {
+      const format = (!stripPremium && current.resize.format === "jpg") ? "image/jpeg" : "image/png";
+
+      canvas.toBlob(
+        async (blob) => {
+          if (!blob) {
+            setIsApplying(false);
+            return;
+          }
+          const arrayBuffer = await blob.arrayBuffer();
+          const bytes = new Uint8Array(arrayBuffer);
+
+          bridge.insertResultImage(bytes);
+
+          setIsApplying(false);
+          dispatch(
+            addToast({
+              id: `toast_applied_${Date.now()}`,
+              kind: "success",
+              title: "Inserted to Figma",
+              message: stripPremium
+                ? "Your cutout with free edits was added to the canvas."
+                : "Your edited asset was added to the canvas.",
+            })
+          );
+        },
+        format,
+        0.95
+      );
+    } catch (err) {
+      console.error("Apply failed", err);
+      setIsApplying(false);
+      dispatch(
+        addToast({
+          id: `toast_apply_err_${Date.now()}`,
+          kind: "error",
+          title: "Apply failed",
+          message: "Could not insert image to canvas.",
+        })
+      );
+    }
+  };
+
+  const performDownload = async (stripPremium = false) => {
+    const canvas = await renderCompositedCanvas(stripPremium);
     if (!canvas) {
       dispatch(
         addToast({
@@ -372,7 +435,7 @@ export function EditStudioScreen() {
       return;
     }
 
-    const format = current.resize.format;
+    const format = (!stripPremium && current.resize.format) || "png";
     const mime =
       format === "webp" ? "image/webp" : format === "jpg" ? "image/jpeg" : "image/png";
 
@@ -403,52 +466,51 @@ export function EditStudioScreen() {
     );
   };
 
+  // ── Download Handler ──
+  const handleDownload = async () => {
+    if (hasPremiumFeaturesActive) {
+      pendingActionRef.current = "download";
+      dispatch(openModal({ kind: "plan_picker", context: "apply_premium" }));
+      return;
+    }
+    performDownload(false);
+  };
+
   // ── Apply to Figma Canvas Handler ──
   const handleApply = async () => {
-    const canvas = await renderCompositedCanvas();
-    if (!canvas) return;
-
-    setIsApplying(true);
-    try {
-      const format = current.resize.format === "jpg" ? "image/jpeg" : "image/png";
-
-      canvas.toBlob(
-        async (blob) => {
-          if (!blob) {
-            setIsApplying(false);
-            return;
-          }
-          const arrayBuffer = await blob.arrayBuffer();
-          const bytes = new Uint8Array(arrayBuffer);
-
-          bridge.insertResultImage(bytes);
-
-          setIsApplying(false);
-          dispatch(
-            addToast({
-              id: `toast_applied_${Date.now()}`,
-              kind: "success",
-              title: "Inserted to Figma",
-              message: "Your edited asset was added to the canvas.",
-            })
-          );
-        },
-        format,
-        0.95
-      );
-    } catch (err) {
-      console.error("Apply failed", err);
-      setIsApplying(false);
-      dispatch(
-        addToast({
-          id: `toast_apply_err_${Date.now()}`,
-          kind: "error",
-          title: "Apply failed",
-          message: "Could not insert image to canvas.",
-        })
-      );
+    if (hasPremiumFeaturesActive) {
+      pendingActionRef.current = "apply";
+      dispatch(openModal({ kind: "plan_picker", context: "apply_premium" }));
+      return;
     }
+    performApply(false);
   };
+
+  // ── Listen for "apply-free-edits-only" event from Case 3 modal ──
+  useEffect(() => {
+    const onApplyFreeEdits = () => {
+      // Revert background to transparent and clear custom resize in editor state
+      setCurrent((prev) => ({
+        ...prev,
+        background: DEFAULT_BACKGROUND,
+        resize: {
+          ...prev.resize,
+          preset: "original",
+          width: editingImage?.width || 800,
+          height: editingImage?.height || 800,
+        },
+      }));
+
+      if (pendingActionRef.current === "download") {
+        performDownload(true);
+      } else {
+        performApply(true);
+      }
+    };
+
+    window.addEventListener("apply-free-edits-only", onApplyFreeEdits);
+    return () => window.removeEventListener("apply-free-edits-only", onApplyFreeEdits);
+  }, [editingImage, current]);
 
   // ── Canvas Insertion Handler ──
   const handleInsertFromCanvas = async () => {

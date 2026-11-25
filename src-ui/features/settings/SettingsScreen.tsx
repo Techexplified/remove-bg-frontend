@@ -125,7 +125,7 @@ export function SettingsScreen() {
         <AccountScreen
           onBackToHome={() => dispatch(setSection("features"))}
           onNavigateTab={setActiveTab}
-          onManagePlan={() => dispatch(openModal({ kind: "plan_picker" }))}
+          onManagePlan={() => dispatch(openModal({ kind: "plan_picker", context: "upgrade" }))}
           onTopUp={() => dispatch(openModal({ kind: "topup" }))}
           openExternal={bridge.openExternal}
           watching={checkoutWatcher.isWatching}

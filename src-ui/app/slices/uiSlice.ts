@@ -9,10 +9,12 @@ interface CheckoutOverlay {
   message?: string;
 }
 
+export type ModalContext = "out_of_credits" | "upgrade" | "apply_premium";
+
 interface UIState {
   activeSection: SectionId;
   activeAIFeature: FeatureId | null;
-  modal: { kind: ModalKind; featureId?: FeatureId };
+  modal: { kind: ModalKind; featureId?: FeatureId; context?: ModalContext };
   processing: ProcessingState;
   toasts: Toast[];
   lastRunFeatureId: FeatureId | null;
@@ -43,7 +45,7 @@ const uiSlice = createSlice({
   reducers: {
     setSection: (s, a: PayloadAction<SectionId>) => { s.activeSection = a.payload; s.modal = { kind: "none" }; },
     setAIFeature: (s, a: PayloadAction<FeatureId | null>) => { s.activeAIFeature = a.payload; },
-    openModal: (s, a: PayloadAction<{ kind: ModalKind; featureId?: FeatureId }>) => { s.modal = a.payload; },
+    openModal: (s, a: PayloadAction<{ kind: ModalKind; featureId?: FeatureId; context?: ModalContext }>) => { s.modal = a.payload; },
     closeModal: (s) => { s.modal = { kind: "none" }; },
     setProcessing: (s, a: PayloadAction<ProcessingState>) => { s.processing = a.payload; },
     addToast: (s, a: PayloadAction<Toast>) => { s.toasts.push(a.payload); },

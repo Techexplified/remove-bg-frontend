@@ -2,17 +2,22 @@ import { Scissors, SlidersHorizontal } from "lucide-react";
 
 interface Props {
   count: number;
+  isOutOfCredits?: boolean;
   onRemoveBgClick?: () => void;
   onEditClick?: () => void;
 }
 
-export function HomeActionBar({ count, onRemoveBgClick, onEditClick }: Props) {
-  const isRemoveEnabled = count > 0;
+export function HomeActionBar({ count, isOutOfCredits = false, onRemoveBgClick, onEditClick }: Props) {
   const isMultiple = count > 1;
   const isEditDisabled = isMultiple; // Edit is disabled when multiple images are chosen
 
-  // Dynamic label based on selection count
-  const primaryLabel = !isRemoveEnabled
+  // When out of credits, button is clickable so user can open upgrade modal
+  const isRemoveEnabled = isOutOfCredits || count > 0;
+
+  // Dynamic label based on credits & selection count
+  const primaryLabel = isOutOfCredits
+    ? "Out of credits"
+    : count === 0
     ? "Remove background"
     : isMultiple
     ? `Remove backgrounds · ${count} credits`
@@ -23,7 +28,7 @@ export function HomeActionBar({ count, onRemoveBgClick, onEditClick }: Props) {
       {/* Primary Remove Background Button */}
       <button
         type="button"
-        className={`home-v2-primary-btn ${!isRemoveEnabled ? "disabled" : ""}`}
+        className={`home-v2-primary-btn ${!isRemoveEnabled ? "disabled" : ""} ${isOutOfCredits ? "is-out-of-credits" : ""}`}
         disabled={!isRemoveEnabled}
         onClick={onRemoveBgClick}
       >
@@ -45,7 +50,9 @@ export function HomeActionBar({ count, onRemoveBgClick, onEditClick }: Props) {
 
       {/* Dynamic Micro-caption */}
       <p className="home-v2-action-caption">
-        {count === 0
+        {isOutOfCredits
+          ? "You've used all your free credits. Upgrade to continue."
+          : count === 0
           ? "Pick one or more images to start"
           : isMultiple
           ? "Edit is available for 1 image at a time"

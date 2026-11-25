@@ -131,7 +131,7 @@ export function BatchProcessScreen() {
     } else {
       bridge.notify(`Insufficient credits (${spendableCredits} remaining, need ${creditCost}). Upgrade plan to continue.`);
     }
-    dispatch(openModal({ kind: "plan_picker" }));
+    dispatch(openModal({ kind: "plan_picker", context: "out_of_credits" }));
   };
 
   const handleProcess = async () => {

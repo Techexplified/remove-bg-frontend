@@ -26,7 +26,8 @@
   background: #ffffff;
   border-bottom: 1px solid #f1f5f9;
   flex-shrink: 0;
-  z-index: 10;
+  position: relative;
+  z-index: 25;
   box-sizing: border-box;
 }
 

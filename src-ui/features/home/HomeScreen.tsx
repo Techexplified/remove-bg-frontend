@@ -37,6 +37,7 @@ export function HomeScreen() {
   const spendable = !status
     ? 3
     : status.credits + (plan === "pro" ? status.topupCreditsPro : status.topupCreditsStarter);
+  const isOutOfCredits = spendable === 0;
 
   // ── Unified Staging Tray (Aggregates Canvas + Local Uploads up to 15 items) ──
   const [stagedItems, setStagedItems] = useState<SelectedImageItem[]>([]);
@@ -293,26 +294,18 @@ export function HomeScreen() {
 
   // ── Action Handlers ──
   const handleRemoveBgClick = () => {
+    if (spendable < 1) {
+      if (status?.plan === "free") {
+        dispatch(openModal({ kind: "plan_picker", context: "out_of_credits" }));
+      } else {
+        dispatch(openModal({ kind: "topup" }));
+      }
+      return;
+    }
+
     if (stagedItems.length === 0) return;
 
     if (stagedItems.length === 1) {
-      if (spendable < 1) {
-        if (status?.plan === "free") {
-          dispatch(openModal({ kind: "plan_picker" }));
-        } else {
-          dispatch(openModal({ kind: "topup" }));
-        }
-        dispatch(
-          addToast({
-            id: `toast_nocredits_${Date.now()}`,
-            kind: "warning",
-            title: "Out of credits",
-            message: "Upgrade to Starter or Pro to continue removing backgrounds.",
-          })
-        );
-        return;
-      }
-
       const item = stagedItems[0];
       setProcessingThumb(item.previewUrl);
       setIsProcessing(true);
@@ -380,7 +373,7 @@ export function HomeScreen() {
     if (stagedItems.length >= 2) {
       if (spendable < stagedItems.length) {
         if (status?.plan === "free") {
-          dispatch(openModal({ kind: "plan_picker" }));
+          dispatch(openModal({ kind: "plan_picker", context: "out_of_credits" }));
         } else {
           dispatch(openModal({ kind: "topup" }));
         }
@@ -527,6 +520,7 @@ export function HomeScreen() {
       <footer className="home-v2-footer">
         <HomeActionBar
           count={totalCount}
+          isOutOfCredits={isOutOfCredits}
           onRemoveBgClick={handleRemoveBgClick}
           onEditClick={handleEditClick}
         />
