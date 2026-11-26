@@ -4,6 +4,32 @@ let cachedUserId: string | null = null;
 let cachedDisplayName: string = "Figma User";
 let cachedPlanStatus: unknown = null;
 
+const HISTORY_STORAGE_KEY = "removebg_history_v2";
+const MAX_HISTORY_ITEMS = 15;
+
+async function getStoredHistory(): Promise<any[]> {
+  try {
+    const list = await figma.clientStorage.getAsync(HISTORY_STORAGE_KEY);
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    console.warn("Failed to load history from clientStorage", e);
+    return [];
+  }
+}
+
+async function saveStoredHistory(list: any[]): Promise<void> {
+  try {
+    await figma.clientStorage.setAsync(HISTORY_STORAGE_KEY, list);
+  } catch (e) {
+    console.warn("Failed to save history to clientStorage", e);
+  }
+}
+
+async function broadcastHistory() {
+  const list = await getStoredHistory();
+  figma.ui.postMessage({ type: "history-list-updated", payload: list });
+}
+
 // Initialize persistent status storage in background
 void (async () => {
   try {
@@ -56,6 +82,7 @@ async function sendUserIdentity() {
     displayName,
     cachedStatus: cachedPlanStatus
   });
+  void broadcastHistory();
 }
 
 void sendUserIdentity();
@@ -528,6 +555,99 @@ figma.ui.onmessage = async (msg: { type: string;[k: string]: unknown }) => {
       try {
         void figma.clientStorage.setAsync("removebg_plan_status", msg.payload);
       } catch {}
+      break;
+    }
+
+    case "request-history-list": {
+      void broadcastHistory();
+      break;
+    }
+
+    case "save-history-item": {
+      const item = msg.payload as any;
+      const highResBytes = msg.highResBytes as Uint8Array | undefined;
+      if (item && item.id) {
+        try {
+          const currentList = await getStoredHistory();
+          const filtered = currentList.filter((i) => i.id !== item.id);
+          const updated = [item, ...filtered].slice(0, MAX_HISTORY_ITEMS);
+          await saveStoredHistory(updated);
+
+          // Save high-res compressed bytes in separate clientStorage key
+          if (highResBytes && highResBytes.length > 0) {
+            void figma.clientStorage.setAsync("removebg_img_" + item.id, highResBytes);
+          }
+
+          // Clean up evicted items from storage
+          const updatedIds = new Set(updated.map((i) => i.id));
+          for (const oldItem of currentList) {
+            if (!updatedIds.has(oldItem.id)) {
+              try {
+                void figma.clientStorage.deleteAsync("removebg_img_" + oldItem.id);
+              } catch {}
+            }
+          }
+
+          figma.ui.postMessage({ type: "history-list-updated", payload: updated });
+        } catch (e) {
+          console.warn("Error saving history item:", e);
+        }
+      }
+      break;
+    }
+
+    case "request-history-image-bytes": {
+      const { requestId, id } = msg as unknown as { requestId: string; id: string };
+      try {
+        const storedBytes = await figma.clientStorage.getAsync("removebg_img_" + id);
+        figma.ui.postMessage({
+          type: "history-image-bytes-result",
+          requestId,
+          id,
+          bytes: storedBytes instanceof Uint8Array ? storedBytes : null,
+        });
+      } catch {
+        figma.ui.postMessage({
+          type: "history-image-bytes-result",
+          requestId,
+          id,
+          bytes: null,
+        });
+      }
+      break;
+    }
+
+    case "delete-history-item": {
+      const { id } = msg.payload as { id: string };
+      if (id) {
+        try {
+          const currentList = await getStoredHistory();
+          const updated = currentList.filter((i) => i.id !== id);
+          await saveStoredHistory(updated);
+          try {
+            void figma.clientStorage.deleteAsync("removebg_img_" + id);
+          } catch {}
+          figma.ui.postMessage({ type: "history-list-updated", payload: updated });
+        } catch (e) {
+          console.warn("Error deleting history item:", e);
+        }
+      }
+      break;
+    }
+
+    case "clear-all-history": {
+      try {
+        const currentList = await getStoredHistory();
+        for (const it of currentList) {
+          try {
+            void figma.clientStorage.deleteAsync("removebg_img_" + it.id);
+          } catch {}
+        }
+        await saveStoredHistory([]);
+        figma.ui.postMessage({ type: "history-list-updated", payload: [] });
+      } catch (e) {
+        console.warn("Error clearing history:", e);
+      }
       break;
     }
 

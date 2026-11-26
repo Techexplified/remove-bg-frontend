@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Provider } from "react-redux";
 import { store } from "./app/store";
 import { useAppDispatch, useAppSelector } from "./app/hooks";
-import { setProcessing, addToast, setLastRun, setCheckoutOverlay, incrementUseCount, setSection, openModal } from "./app/slices/uiSlice";
+import { setProcessing, addToast, setLastRun, setCheckoutOverlay, incrementUseCount, setSection, openModal, closeModal } from "./app/slices/uiSlice";
 import { CheckoutOverlay } from "./shared/components/CheckoutOverlay";
 import { ProcessingOverlay } from "./shared/components/ProcessingOverlay";
 import { ToastStack } from "./shared/components/toasts/ToastStack";
@@ -24,6 +24,7 @@ import { BatchResultsScreen } from "./features/batch/BatchResultsScreen";
 import { ResizeExportScreen } from "./features/resize-export/ResizeExportScreen";
 import { BackgroundStudioScreen } from "./features/background-studio/BackgroundStudioScreen";
 import { EditStudioScreen } from "./features/edit-studio/EditStudioScreen";
+import { HistoryScreen } from "./features/history/HistoryScreen";
 import { ExitIntentQuestion } from "./shared/components/feedback/ExitIntentQuestion";
 import { ReviewPrompt } from "./shared/components/feedback/ReviewPrompt";
 import { PluginBridgeProvider, usePluginBridgeContext } from "./shared/context/PluginBridgeContext";
@@ -82,6 +83,7 @@ function AppReady() {
   // AppReady is only mounted once hasReceivedUserId=true, so window.__figmaUserId
   // is already set by the time any of this fires.
   const status = useAppSelector(s => s.status.data);
+  const hasSyncedWithServer = useAppSelector(s => s.status.hasSyncedWithServer);
   const checkoutWatcher = useCheckoutWatcher();
   const checkoutOverlay = useAppSelector(s => s.ui.checkoutOverlay);
 
@@ -98,17 +100,24 @@ function AppReady() {
   const spendable = !status ? 0
     : status.credits + (status.plan === "pro" ? status.topupCreditsPro : status.topupCreditsStarter);
 
-  // Auto-open Out of Credits modal on plugin launch if free user has 0 credits
+  // Auto-open Out of Credits modal on plugin launch ONLY AFTER server confirms 0 credits
   const hasAutoOpenedModalRef = useRef(false);
   useEffect(() => {
-    if (!status) return;
+    if (!status || !hasSyncedWithServer) return;
     if (!hasAutoOpenedModalRef.current) {
       if (status.plan === "free" && spendable === 0) {
         hasAutoOpenedModalRef.current = true;
         dispatch(openModal({ kind: "plan_picker", context: "out_of_credits" }));
       }
     }
-  }, [status, spendable, dispatch]);
+  }, [status, hasSyncedWithServer, spendable, dispatch]);
+
+  // If user gained credits while out_of_credits modal is open, auto-close it
+  useEffect(() => {
+    if (modal.kind === "plan_picker" && modal.context === "out_of_credits" && spendable > 0) {
+      dispatch(closeModal());
+    }
+  }, [modal.kind, modal.context, spendable, dispatch]);
 
   const toast = useCallback((
     kind: "error" | "info" | "success" | "warning",
@@ -453,6 +462,7 @@ function AppReady() {
               onRemoveBackground={() => handleQuickRemoveBg("background_studio")}
             />
           )}
+          {activeSection === "history" && <HistoryScreen />}
         </motion.div>
       </AnimatePresence>
 

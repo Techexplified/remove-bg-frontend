@@ -2,6 +2,18 @@
 // Figma Plugin Bridge Message Types
 // ============================================================================
 
+export interface HistoryMetaItem {
+  id: string;
+  name: string;
+  timestamp: number;
+  width?: number;
+  height?: number;
+  format?: string;
+  source?: "canvas" | "upload";
+  nodeId?: string;
+  thumbnailDataUrl: string;
+}
+
 export type PluginToUIMessage =
   | { type: "selection-changed"; payload: SelectionInfo }
   | { type: "export-success"; payload: Uint8Array }
@@ -12,7 +24,9 @@ export type PluginToUIMessage =
   | { type: "list-selection-result"; payload: SelectionNodeRef[] }
   | { type: "export-node-result"; payload: ExportNodeResult }
   | { type: "export-selection-batch-result"; payload: Array<{ id: string; name: string; bytes: Uint8Array; width: number; height: number }> }
-  | { type: "preview-update"; payload: Uint8Array | null };
+  | { type: "preview-update"; payload: Uint8Array | null }
+  | { type: "history-list-updated"; payload: HistoryMetaItem[] }
+  | { type: "history-image-bytes-result"; requestId: string; id: string; bytes: Uint8Array | null };
 
 export type UIToPluginMessage =
   | { type: "request-selection" }
@@ -39,7 +53,12 @@ export type UIToPluginMessage =
   | { type: "open-external"; payload: string }
   | { type: "notify"; payload: string }
   | { type: "resize-window"; width: number; height: number }
-  | { type: "close-plugin" };
+  | { type: "close-plugin" }
+  | { type: "request-history-list" }
+  | { type: "save-history-item"; payload: HistoryMetaItem; highResBytes?: Uint8Array }
+  | { type: "request-history-image-bytes"; requestId: string; id: string }
+  | { type: "delete-history-item"; payload: { id: string } }
+  | { type: "clear-all-history" };
 
 export type SelectionInfo =
   | { hasSelection: false }

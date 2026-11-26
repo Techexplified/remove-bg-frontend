@@ -1,4 +1,5 @@
 import { Heart, MessageSquare, ExternalLink, ThumbsUp } from "lucide-react";
+import logoIcon from "../../../assets/icon-small-transparent.png";
 
 interface Props {
   isOpen: boolean;
@@ -29,7 +30,7 @@ export function CommunityReviewModal({ isOpen, onClose, onLikeOnFigma }: Props) 
         {/* Plugin Preview Card */}
         <div className="v2-community-plugin-card">
           <div className="v2-community-card-left">
-            <div className="v2-community-plugin-icon">R</div>
+            <img src={logoIcon} alt="RemoveBG" className="v2-community-plugin-icon" />
             <div className="v2-community-plugin-info">
               <span className="v2-community-plugin-name">RemoveBG on Figma</span>
               <span className="v2-community-plugin-author">by Explified · Figma Community</span>

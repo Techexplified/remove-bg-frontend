@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import type { SelectionInfo } from "../../shared/types/messages";
+import type { SelectionInfo, HistoryMetaItem } from "../../shared/types/messages";
 
 export interface UploadedImageInfo {
   name: string;
@@ -49,6 +49,7 @@ interface FigmaState {
   activeImageSource: "canvas" | "upload";
   editingImage: EditingImageInfo | null;
   batchResultItems: BatchResultItem[];
+  historyItems: HistoryMetaItem[];
 }
 
 const CACHED_USER_ID_KEY = "removebg_cached_user_id";
@@ -84,6 +85,7 @@ const initialState: FigmaState = {
   activeImageSource: "canvas",
   editingImage: null,
   batchResultItems: [],
+  historyItems: [],
 };
 
 const figmaSlice = createSlice({
@@ -180,6 +182,18 @@ const figmaSlice = createSlice({
         if (a.payload.errorMessage) item.errorMessage = a.payload.errorMessage;
       }
     },
+    setHistoryItems: (s, a: PayloadAction<HistoryMetaItem[]>) => {
+      s.historyItems = a.payload;
+    },
+    addHistoryItem: (s, a: PayloadAction<HistoryMetaItem>) => {
+      s.historyItems = [a.payload, ...s.historyItems.filter((i) => i.id !== a.payload.id)].slice(0, 15);
+    },
+    removeHistoryItem: (s, a: PayloadAction<string>) => {
+      s.historyItems = s.historyItems.filter((i) => i.id !== a.payload);
+    },
+    clearHistoryItems: (s) => {
+      s.historyItems = [];
+    },
   },
 });
 
@@ -195,5 +209,9 @@ export const {
   setEditingImage,
   setBatchResultItems,
   updateBatchResultItemStatus,
+  setHistoryItems,
+  addHistoryItem,
+  removeHistoryItem,
+  clearHistoryItems,
 } = figmaSlice.actions;
 export default figmaSlice.reducer;

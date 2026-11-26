@@ -513,14 +513,7 @@
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: #0f172a;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: "Manrope", sans-serif;
-  font-size: 14px;
-  font-weight: 800;
+  object-fit: contain;
   flex-shrink: 0;
 }
 

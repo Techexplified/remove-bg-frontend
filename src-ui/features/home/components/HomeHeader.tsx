@@ -1,4 +1,5 @@
 import { Zap, Clock, User } from "lucide-react";
+import logoIcon from "../../../assets/icon-small-transparent.png";
 
 interface Props {
   creditsRemaining: number;
@@ -9,8 +10,9 @@ interface Props {
 export function HomeHeader({ creditsRemaining, onHistoryClick, onProfileClick }: Props) {
   return (
     <header className="home-v2-header">
-      {/* Brand Logo - Typography Only */}
+      {/* Brand Logo */}
       <div className="home-v2-brand">
+        <img src={logoIcon} alt="RemoveBG" className="home-v2-brand-icon" />
         <span className="home-v2-brand-name">RemoveBG</span>
       </div>
 
@@ -22,11 +24,11 @@ export function HomeHeader({ creditsRemaining, onHistoryClick, onProfileClick }:
           <span className="home-v2-credits-count">{creditsRemaining}</span>
         </div>
 
-        {/* History Icon Button (Non-wired visual placeholder) */}
+        {/* History Icon Button */}
         <button
           type="button"
           className="home-v2-icon-btn"
-          title="History (Coming soon)"
+          title="History"
           onClick={onHistoryClick}
         >
           <Clock size={16} />

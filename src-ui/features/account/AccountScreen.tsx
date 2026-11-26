@@ -40,6 +40,7 @@ export function AccountScreen({
 }: Props) {
   const dispatch = useAppDispatch();
   const status = useAppSelector((s) => s.status.data);
+  const statusLoading = useAppSelector((s) => s.status.loading);
   const refetch = () => dispatch(loadPlanStatus());
   const displayName = useAppSelector((s) => s.figma.displayName);
   const userId = useAppSelector((s) => s.figma.userId);
@@ -109,7 +110,7 @@ export function AccountScreen({
           onClick={() => refetch()}
           title="Refresh account status"
         >
-          <RefreshCw size={14} strokeWidth={2} />
+          <RefreshCw size={14} strokeWidth={2} className={statusLoading ? "spin" : ""} />
         </button>
       </header>
 

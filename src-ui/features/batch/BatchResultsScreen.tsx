@@ -22,6 +22,8 @@ import { removeBackgroundLocal } from "../../shared/utils/fallbackRemoval";
 import { refundCredits } from "../../app/slices/statusSlice";
 import { usePluginBridgeContext } from "../../shared/context/PluginBridgeContext";
 import { exportBatchAsZip } from "./utils/zipExporter";
+import { generateThumbnailDataUrl } from "../../shared/utils/thumbnailHelper";
+import type { HistoryMetaItem } from "../../shared/types/messages";
 import "../../shared/styles/v2/batch_results.css";
 
 export function BatchResultsScreen() {
@@ -42,6 +44,16 @@ export function BatchResultsScreen() {
 
   // ── Concurrent Processing Worker Queue (Max 2 Parallel) ──
   const processingInitiatedRef = useRef(false);
+  const isMountedRef = useRef(true);
+  const statusRef = useRef(status);
+  statusRef.current = status;
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (processingInitiatedRef.current) return;
@@ -49,12 +61,11 @@ export function BatchResultsScreen() {
     if (itemsToProcess.length === 0) return;
     processingInitiatedRef.current = true;
 
-    let cancelled = false;
     const CONCURRENCY = 2;
     let nextIndex = 0;
 
     async function processItem(item: BatchResultItem) {
-      if (cancelled) return;
+      if (!isMountedRef.current) return;
 
       dispatch(
         updateBatchResultItemStatus({
@@ -71,16 +82,32 @@ export function BatchResultsScreen() {
         }
 
         let cutoutBytes: Uint8Array;
-        if (status?.credits && status.credits < 1 && status.plan === "pro") {
+        const currentStatus = statusRef.current;
+        if (currentStatus?.credits && currentStatus.credits < 1 && currentStatus.plan === "pro") {
           cutoutBytes = await removeBackgroundLocal(inputBytes);
         } else {
           cutoutBytes = await runFeature("remove_bg_basic", inputBytes);
         }
 
-        if (cancelled) return;
+        if (!isMountedRef.current) return;
 
         const blob = new Blob([cutoutBytes as unknown as BlobPart], { type: "image/png" });
         const resultUrl = URL.createObjectURL(blob);
+
+        // Save batch cutout to history immediately
+        const thumbnailDataUrl = await generateThumbnailDataUrl(cutoutBytes);
+        const histItem: HistoryMetaItem = {
+          id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          name: item.name || "Cutout",
+          timestamp: Date.now(),
+          width: item.width,
+          height: item.height,
+          format: "PNG",
+          source: item.source || "upload",
+          nodeId: item.nodeId,
+          thumbnailDataUrl,
+        };
+        bridge.saveHistoryItem(histItem, cutoutBytes);
 
         dispatch(
           updateBatchResultItemStatus({
@@ -91,7 +118,8 @@ export function BatchResultsScreen() {
           })
         );
       } catch (err) {
-        if (cancelled) return;
+        if (!isMountedRef.current) return;
+        const errMsg = err instanceof Error ? err.message : "Processing failed";
         console.error(`Error processing batch item ${item.name}:`, err);
         // Refund credit for this failed item
         dispatch(refundCredits(1));
@@ -99,16 +127,18 @@ export function BatchResultsScreen() {
           updateBatchResultItemStatus({
             id: item.id,
             status: "error",
-            errorMessage: err instanceof Error ? err.message : "Processing failed",
+            errorMessage: errMsg,
           })
         );
       }
     }
 
     async function worker() {
-      while (nextIndex < itemsToProcess.length && !cancelled) {
+      while (nextIndex < itemsToProcess.length && isMountedRef.current) {
         const item = itemsToProcess[nextIndex++];
-        await processItem(item);
+        if (item) {
+          await processItem(item);
+        }
       }
     }
 
@@ -118,11 +148,7 @@ export function BatchResultsScreen() {
     );
 
     Promise.all(workers);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [batchResultItems, dispatch, status]);
+  }, []);
 
   const totalCount = batchResultItems.length;
   const isAllComplete =
@@ -329,6 +355,11 @@ export function BatchResultsScreen() {
                 {item.width && item.height && (
                   <span className="v2-batch-item-dims">
                     {item.width} × {item.height}
+                  </span>
+                )}
+                {isError && item.errorMessage && (
+                  <span className="v2-batch-item-error" style={{ fontSize: 10.5, color: "#ef4444", marginTop: 2 }} title={item.errorMessage}>
+                    {item.errorMessage}
                   </span>
                 )}
               </div>

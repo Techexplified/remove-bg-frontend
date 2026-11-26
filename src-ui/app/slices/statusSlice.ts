@@ -64,6 +64,9 @@ function saveCachedPlanStatus(status: PlanStatus | null) {
   try {
     if (status) {
       localStorage.setItem(CACHE_KEY, JSON.stringify(status));
+      if (typeof parent !== "undefined" && parent.postMessage) {
+        parent.postMessage({ pluginMessage: { type: "update-cached-plan-status", payload: status } }, "*");
+      }
     }
   } catch {
     // Ignore storage quota errors
@@ -74,12 +77,14 @@ interface StatusState {
   data: PlanStatus | null;
   loading: boolean;
   error: string | null;
+  hasSyncedWithServer: boolean;
 }
 
 const initialState: StatusState = {
   data: loadCachedPlanStatus(),
   loading: false,
   error: null,
+  hasSyncedWithServer: false,
 };
 
 const statusSlice = createSlice({
@@ -122,28 +127,13 @@ const statusSlice = createSlice({
       })
       .addCase(loadPlanStatus.fulfilled, (s, a) => {
         s.loading = false;
-        if (s.data && a.payload && s.data.plan === a.payload.plan) {
-          const localTotal =
-            s.data.credits +
-            (s.data.plan === "pro" ? s.data.topupCreditsPro : s.data.topupCreditsStarter);
-          const serverTotal =
-            a.payload.credits +
-            (a.payload.plan === "pro" ? a.payload.topupCreditsPro : a.payload.topupCreditsStarter);
-          // Prevent stale server responses from rubber-banding recently deducted credits
-          if (serverTotal > localTotal) {
-            a.payload.credits = s.data.credits;
-            if (s.data.plan === "pro") {
-              a.payload.topupCreditsPro = s.data.topupCreditsPro;
-            } else {
-              a.payload.topupCreditsStarter = s.data.topupCreditsStarter;
-            }
-          }
-        }
+        s.hasSyncedWithServer = true;
         s.data = a.payload;
         saveCachedPlanStatus(a.payload);
       })
       .addCase(loadPlanStatus.rejected, (s, a) => {
         s.loading = false;
+        s.hasSyncedWithServer = true;
         // SWR: Keep cached data if available; do not wipe out UI during temporary network issues
         if (!s.data) {
           s.data = null;

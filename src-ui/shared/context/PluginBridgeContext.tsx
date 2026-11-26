@@ -11,10 +11,21 @@
 import { createContext, useContext, useEffect, useRef, useCallback, type ReactNode } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { store } from "../../app/store";
-import { setUserIdentity, setSelection, setPreviewUrl, setOriginalUrl, setImageFormat } from "../../app/slices/figmaSlice";
+import {
+  setUserIdentity,
+  setSelection,
+  setPreviewUrl,
+  setOriginalUrl,
+  setImageFormat,
+  setHistoryItems,
+  addHistoryItem,
+  removeHistoryItem,
+  clearHistoryItems,
+} from "../../app/slices/figmaSlice";
 import { detectImageFormat } from "../utils/imageFormat";
+import { dataUrlToUint8Array, compressHighResCutout } from "../utils/thumbnailHelper";
 import { setPlanStatus } from "../../app/slices/statusSlice";
-import type { PluginToUIMessage, UIToPluginMessage, SelectionNodeRef } from "../types/messages";
+import type { PluginToUIMessage, UIToPluginMessage, SelectionNodeRef, HistoryMetaItem } from "../types/messages";
 import type { PlanStatus } from "../types/api";
 
 function send(msg: UIToPluginMessage) {
@@ -46,6 +57,11 @@ export interface PluginBridge {
   insertBatchResultImages: (items: Array<{ name: string; bytes: Uint8Array }>) => void;
   resizeWindow: (width: number, height: number) => void;
   requestSelection: () => void;
+  saveHistoryItem: (item: HistoryMetaItem, cutoutBytes?: Uint8Array) => void;
+  deleteHistoryItem: (id: string) => void;
+  clearAllHistory: () => void;
+  getHistoryItemBytes: (id: string, fallbackThumbnailDataUrl?: string) => Promise<Uint8Array | null>;
+  requestHistoryList: () => void;
 }
 
 const PluginBridgeContext = createContext<PluginBridge | null>(null);
@@ -57,6 +73,8 @@ export function PluginBridgeProvider({ children }: { children: ReactNode }) {
   const pendingList = useRef<{ resolve: (nodes: SelectionNodeRef[]) => void; reject: (e: Error) => void } | null>(null);
   const pendingNodes = useRef<Map<string, { resolve: (b: Uint8Array) => void; reject: (e: Error) => void }>>(new Map());
   const pendingBatchExport = useRef<{ resolve: (items: Array<{ id: string; name: string; bytes: Uint8Array; width: number; height: number }>) => void; reject: (e: Error) => void } | null>(null);
+  const inMemoryCutoutCache = useRef<Map<string, Uint8Array>>(new Map());
+  const pendingHistoryImageBytes = useRef<Map<string, { resolve: (b: Uint8Array | null) => void; reject: (e: Error) => void }>>(new Map());
 
   useEffect(() => {
     const handler = (event: MessageEvent) => {
@@ -156,12 +174,27 @@ export function PluginBridgeProvider({ children }: { children: ReactNode }) {
           pendingNodes.current.delete(msg.payload.requestId);
           break;
         }
+
+        case "history-list-updated": {
+          dispatch(setHistoryItems(msg.payload || []));
+          break;
+        }
+
+        case "history-image-bytes-result": {
+          const pending = pendingHistoryImageBytes.current.get(msg.requestId);
+          if (pending) {
+            pending.resolve(msg.bytes);
+            pendingHistoryImageBytes.current.delete(msg.requestId);
+          }
+          break;
+        }
       }
     };
 
     window.addEventListener("message", handler);
     send({ type: "request-selection" });
     send({ type: "request-user-id" });
+    send({ type: "request-history-list" });
     return () => {
       window.removeEventListener("message", handler);
       if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current);
@@ -251,10 +284,114 @@ export function PluginBridgeProvider({ children }: { children: ReactNode }) {
     send({ type: "request-selection" });
   }, []);
 
+  const saveHistoryItem = useCallback(
+    (item: HistoryMetaItem, cutoutBytes?: Uint8Array) => {
+      if (cutoutBytes && cutoutBytes.length > 0) {
+        inMemoryCutoutCache.current.set(item.id, cutoutBytes);
+      }
+      dispatch(addHistoryItem(item));
+
+      // Asynchronously compress high-res copy and persist to clientStorage
+      if (cutoutBytes && cutoutBytes.length > 0) {
+        void (async () => {
+          try {
+            const highResBytes = await compressHighResCutout(cutoutBytes);
+            send({ type: "save-history-item", payload: item, highResBytes });
+          } catch {
+            send({ type: "save-history-item", payload: item, highResBytes: cutoutBytes });
+          }
+        })();
+      } else {
+        send({ type: "save-history-item", payload: item });
+      }
+    },
+    [dispatch]
+  );
+
+  const deleteHistoryItem = useCallback(
+    (id: string) => {
+      inMemoryCutoutCache.current.delete(id);
+      dispatch(removeHistoryItem(id));
+      send({ type: "delete-history-item", payload: { id } });
+    },
+    [dispatch]
+  );
+
+  const clearAllHistory = useCallback(() => {
+    inMemoryCutoutCache.current.clear();
+    dispatch(clearHistoryItems());
+    send({ type: "clear-all-history" });
+  }, [dispatch]);
+
+  const getHistoryItemBytes = useCallback(
+    async (id: string, fallbackThumbnailDataUrl?: string): Promise<Uint8Array | null> => {
+      // 1. Check in-memory RAM cache (0ms instant during active session)
+      const cached = inMemoryCutoutCache.current.get(id);
+      if (cached && cached.length > 0) return cached;
+
+      // 2. Lazy load high-res bytes from clientStorage across plugin restarts
+      const requestId = `hist_req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      try {
+        const bytesPromise = new Promise<Uint8Array | null>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            pendingHistoryImageBytes.current.delete(requestId);
+            resolve(null);
+          }, 4000);
+          pendingHistoryImageBytes.current.set(requestId, {
+            resolve: (b) => {
+              clearTimeout(timeout);
+              resolve(b);
+            },
+            reject: (err) => {
+              clearTimeout(timeout);
+              reject(err);
+            },
+          });
+          send({ type: "request-history-image-bytes", requestId, id });
+        });
+
+        const loadedBytes = await bytesPromise;
+        if (loadedBytes && loadedBytes.length > 0) {
+          inMemoryCutoutCache.current.set(id, loadedBytes);
+          return loadedBytes;
+        }
+      } catch (err) {
+        console.warn("Failed to lazy-load history item bytes:", err);
+      }
+
+      // 3. Fallback to thumbnail data URL if clientStorage was empty
+      if (fallbackThumbnailDataUrl) {
+        return dataUrlToUint8Array(fallbackThumbnailDataUrl);
+      }
+      return null;
+    },
+    []
+  );
+
+  const requestHistoryList = useCallback(() => {
+    send({ type: "request-history-list" });
+  }, []);
+
   const bridge: PluginBridge = {
-    exportSelectedImage, insertResultImage, requestPreview, requestUserIdRetry,
-    openExternal, notify, listSelection, exportNode, resizeSelection, applyAdjustments,
-    exportSelectionBatch, insertBatchResultImages, resizeWindow, requestSelection,
+    exportSelectedImage,
+    insertResultImage,
+    requestPreview,
+    requestUserIdRetry,
+    openExternal,
+    notify,
+    listSelection,
+    exportNode,
+    resizeSelection,
+    applyAdjustments,
+    exportSelectionBatch,
+    insertBatchResultImages,
+    resizeWindow,
+    requestSelection,
+    saveHistoryItem,
+    deleteHistoryItem,
+    clearAllHistory,
+    getHistoryItemBytes,
+    requestHistoryList,
   };
 
   return (

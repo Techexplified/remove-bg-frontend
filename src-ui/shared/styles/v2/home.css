@@ -35,6 +35,15 @@
 .home-v2-brand {
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.home-v2-brand-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  border-radius: 5px;
+  flex-shrink: 0;
 }
 
 /* Logo / Brand — Manrope 800 */

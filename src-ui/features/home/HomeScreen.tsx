@@ -4,6 +4,8 @@ import { addToast, setSection, setPreviewReturnSection, openModal } from "../../
 import { deductCredits, refundCredits } from "../../app/slices/statusSlice";
 import { runFeature, ApiError } from "../../shared/api/client";
 import { removeBackgroundLocal } from "../../shared/utils/fallbackRemoval";
+import { generateThumbnailDataUrl } from "../../shared/utils/thumbnailHelper";
+import type { HistoryMetaItem } from "../../shared/types/messages";
 import {
   setEditingImage,
   setOriginalUrl,
@@ -331,6 +333,21 @@ export function HomeScreen() {
           const blob = new Blob([cutoutBytes as unknown as BlobPart], { type: "image/png" });
           const cutoutUrl = URL.createObjectURL(blob);
 
+          // Save cutout to history with compact thumbnail and in-memory full-res cache
+          const thumbnailDataUrl = await generateThumbnailDataUrl(cutoutBytes);
+          const histItem: HistoryMetaItem = {
+            id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            name: item.name || "Cutout",
+            timestamp: Date.now(),
+            width: item.width,
+            height: item.height,
+            format: "PNG",
+            source: item.source || "upload",
+            nodeId: item.nodeId,
+            thumbnailDataUrl,
+          };
+          bridge.saveHistoryItem(histItem, cutoutBytes);
+
           dispatch(setOriginalUrl(item.previewUrl));
           dispatch(setPreviewUrl(cutoutUrl));
           dispatch(setPreviewReturnSection("features"));
@@ -434,14 +451,7 @@ export function HomeScreen() {
   };
 
   const handleHistoryClick = () => {
-    dispatch(
-      addToast({
-        id: `toast_history_${Date.now()}`,
-        kind: "info",
-        title: "History",
-        message: "History screen will be built in Phase 3.",
-      })
-    );
+    dispatch(setSection("history"));
   };
 
   const handleProfileClick = () => {
