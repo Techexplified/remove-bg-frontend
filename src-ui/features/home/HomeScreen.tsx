@@ -458,6 +458,14 @@ export function HomeScreen() {
     dispatch(setSection("settings"));
   };
 
+  const handleCreditsClick = () => {
+    if (status?.plan === "free") {
+      dispatch(openModal({ kind: "plan_picker" }));
+    } else {
+      dispatch(openModal({ kind: "topup" }));
+    }
+  };
+
   const totalCount = stagedItems.length;
   const viewMode: HomeViewMode = totalCount === 0 ? "empty" : totalCount === 1 ? "single" : "multi";
 
@@ -483,6 +491,7 @@ export function HomeScreen() {
         creditsRemaining={spendable}
         onHistoryClick={handleHistoryClick}
         onProfileClick={handleProfileClick}
+        onCreditsClick={handleCreditsClick}
       />
 
       {/* Title & Subtitle */}

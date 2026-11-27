@@ -61,33 +61,45 @@
   gap: 8px;
 }
 
-/* Credits Pill (Small label) — DM Sans 500 */
+/* Credits Pill (Equal 32px height to match circular buttons) */
 .home-v2-credits-pill {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
+  height: 32px;
+  padding: 0 11px;
   background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-  border: 1px solid rgba(249, 115, 22, 0.25);
+  border: 1px solid rgba(249, 115, 22, 0.28);
   color: #ea580c;
-  padding: 3px 9px;
-  border-radius: 20px;
+  border-radius: 16px;
   font-family: 'DM Sans', sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: default;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
   user-select: none;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.home-v2-credits-pill:hover {
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  border-color: rgba(249, 115, 22, 0.45);
 }
 
 .home-v2-credits-icon {
   color: #f97316;
   fill: #f97316;
+  flex-shrink: 0;
 }
 
 .home-v2-credits-count {
   font-family: 'DM Sans', sans-serif;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 12.5px;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.1px;
+  line-height: 1;
 }
 
 /* Header Icon Buttons */

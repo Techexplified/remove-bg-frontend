@@ -5,9 +5,10 @@ interface Props {
   creditsRemaining: number;
   onHistoryClick?: () => void;
   onProfileClick?: () => void;
+  onCreditsClick?: () => void;
 }
 
-export function HomeHeader({ creditsRemaining, onHistoryClick, onProfileClick }: Props) {
+export function HomeHeader({ creditsRemaining, onHistoryClick, onProfileClick, onCreditsClick }: Props) {
   return (
     <header className="home-v2-header">
       {/* Brand Logo */}
@@ -19,8 +20,14 @@ export function HomeHeader({ creditsRemaining, onHistoryClick, onProfileClick }:
       {/* Right controls */}
       <div className="home-v2-header-actions">
         {/* Credits Pill */}
-        <div className="home-v2-credits-pill" title={`${creditsRemaining} credits available`}>
-          <Zap size={13} className="home-v2-credits-icon" />
+        <div
+          className="home-v2-credits-pill"
+          title={`${creditsRemaining} credits available · Click to get more`}
+          onClick={onCreditsClick}
+          role={onCreditsClick ? "button" : undefined}
+          tabIndex={onCreditsClick ? 0 : undefined}
+        >
+          <Zap size={13.5} className="home-v2-credits-icon" strokeWidth={2.4} />
           <span className="home-v2-credits-count">{creditsRemaining}</span>
         </div>
 
