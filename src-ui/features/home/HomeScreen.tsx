@@ -466,6 +466,10 @@ export function HomeScreen() {
     }
   };
 
+  const handlePlaygroundClick = () => {
+    dispatch(setSection("playground"));
+  };
+
   const totalCount = stagedItems.length;
   const viewMode: HomeViewMode = totalCount === 0 ? "empty" : totalCount === 1 ? "single" : "multi";
 
@@ -492,6 +496,7 @@ export function HomeScreen() {
         onHistoryClick={handleHistoryClick}
         onProfileClick={handleProfileClick}
         onCreditsClick={handleCreditsClick}
+        onPlaygroundClick={handlePlaygroundClick}
       />
 
       {/* Title & Subtitle */}

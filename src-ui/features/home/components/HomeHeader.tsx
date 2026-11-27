@@ -1,4 +1,4 @@
-import { Zap, Clock, User } from "lucide-react";
+import { Zap, Clock, User, FlaskConical } from "lucide-react";
 import logoIcon from "../../../assets/icon-small-transparent.png";
 
 interface Props {
@@ -6,9 +6,16 @@ interface Props {
   onHistoryClick?: () => void;
   onProfileClick?: () => void;
   onCreditsClick?: () => void;
+  onPlaygroundClick?: () => void;
 }
 
-export function HomeHeader({ creditsRemaining, onHistoryClick, onProfileClick, onCreditsClick }: Props) {
+export function HomeHeader({
+  creditsRemaining,
+  onHistoryClick,
+  onProfileClick,
+  onCreditsClick,
+  onPlaygroundClick,
+}: Props) {
   return (
     <header className="home-v2-header">
       {/* Brand Logo */}
@@ -50,6 +57,18 @@ export function HomeHeader({ creditsRemaining, onHistoryClick, onProfileClick, o
         >
           <User size={16} />
         </button>
+
+        {/* Temporary Dev Playground Button */}
+        {onPlaygroundClick && (
+          <button
+            type="button"
+            className="home-v2-icon-btn home-v2-playground-btn"
+            title="UI Playground & Payment Transition Studio"
+            onClick={onPlaygroundClick}
+          >
+            <FlaskConical size={15} />
+          </button>
+        )}
       </div>
     </header>
   );

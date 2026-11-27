@@ -25,6 +25,7 @@ import { ResizeExportScreen } from "./features/resize-export/ResizeExportScreen"
 import { BackgroundStudioScreen } from "./features/background-studio/BackgroundStudioScreen";
 import { EditStudioScreen } from "./features/edit-studio/EditStudioScreen";
 import { HistoryScreen } from "./features/history/HistoryScreen";
+import { PlaygroundScreen } from "./features/playground/PlaygroundScreen";
 import { ExitIntentQuestion } from "./shared/components/feedback/ExitIntentQuestion";
 import { ReviewPrompt } from "./shared/components/feedback/ReviewPrompt";
 import { PluginBridgeProvider, usePluginBridgeContext } from "./shared/context/PluginBridgeContext";
@@ -463,6 +464,7 @@ function AppReady() {
             />
           )}
           {activeSection === "history" && <HistoryScreen />}
+          {activeSection === "playground" && <PlaygroundScreen />}
         </motion.div>
       </AnimatePresence>
 
