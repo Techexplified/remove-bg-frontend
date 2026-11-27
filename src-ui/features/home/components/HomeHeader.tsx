@@ -59,7 +59,7 @@ export function HomeHeader({
         </button>
 
         {/* Temporary Dev Playground Button */}
-        {onPlaygroundClick && (
+        {/* {onPlaygroundClick && (
           <button
             type="button"
             className="home-v2-icon-btn home-v2-playground-btn"
@@ -68,7 +68,7 @@ export function HomeHeader({
           >
             <FlaskConical size={15} />
           </button>
-        )}
+        )} */}
       </div>
     </header>
   );
