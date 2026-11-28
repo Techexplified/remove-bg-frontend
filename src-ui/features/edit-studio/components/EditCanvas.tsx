@@ -417,6 +417,7 @@ export function EditCanvas({
           const targetH = resize.height || origH;
           const origRatio = origW / origH;
           const targetRatio = targetW / targetH;
+          const fitMode = resize.fitMode || "fill";
 
           let cropStyle: React.CSSProperties = {
             top: 0,
@@ -425,7 +426,9 @@ export function EditCanvas({
             height: "100%",
           };
 
-          if (resize.preset !== "original" && Math.abs(origRatio - targetRatio) > 0.01) {
+          const hasRatioDiff = resize.preset !== "original" && Math.abs(origRatio - targetRatio) > 0.01;
+
+          if (hasRatioDiff && fitMode === "fill") {
             if (targetRatio > origRatio) {
               const heightPct = (origRatio / targetRatio) * 100;
               const topPct = (100 - heightPct) / 2;
@@ -445,12 +448,20 @@ export function EditCanvas({
                 height: "100%",
               };
             }
+          } else if (fitMode === "fit") {
+            cropStyle = {
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              boxShadow: "none",
+            };
           }
 
           return (
-            <div className="edit-studio-resize-crop-frame" style={cropStyle}>
+            <div className={`edit-studio-resize-crop-frame ${fitMode === "fit" ? "is-fit-mode" : ""}`} style={cropStyle}>
               <span className="edit-studio-crop-dim-badge">
-                {targetW} × {targetH}
+                {targetW} × {targetH} {hasRatioDiff ? (fitMode === "fit" ? "• Fit" : "• Fill") : ""}
               </span>
             </div>
           );

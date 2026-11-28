@@ -561,6 +561,7 @@
   background: #0f172a;
   border-radius: 9999px;
   pointer-events: none;
+  transition: width 0.08s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .studio-slider-thumb {
@@ -575,11 +576,28 @@
   transform: translate(-50%, -50%);
   pointer-events: none;
   z-index: 2;
-  transition: transform 0.1s ease;
+  transition: left 0.08s cubic-bezier(0.2, 0, 0, 1), transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.studio-slider-container:hover .studio-slider-thumb {
-  transform: translate(-50%, -50%) scale(1.08);
+/* While actively dragging, disable transitions for 0-latency 60/120fps direct cursor sync */
+.studio-slider-container.is-dragging .studio-slider-fill,
+.studio-slider-container.is-dragging .studio-slider-thumb {
+  transition: none !important;
+}
+
+.studio-slider-container.is-dragging {
+  cursor: grabbing;
+}
+
+.studio-slider-container.is-dragging .studio-slider-thumb,
+.studio-slider-container:active .studio-slider-thumb {
+  transform: translate(-50%, -50%) scale(1.18);
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.15), 0 2px 6px rgba(15, 23, 42, 0.4);
+}
+
+.studio-slider-container:hover:not(.is-dragging) .studio-slider-thumb {
+  transform: translate(-50%, -50%) scale(1.1);
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08), 0 1px 4px rgba(15, 23, 42, 0.35);
 }
 
 /* Pill Segmented Controls (Erase vs Restore, Formats, etc) */
@@ -1063,17 +1081,101 @@
 }
 
 /* Filters Carousel */
+.edit-studio-filters-carousel-wrapper {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
 .edit-studio-filters-carousel {
   display: flex;
   align-items: center;
   gap: 10px;
   overflow-x: auto;
-  padding: 8px 4px 8px;
+  padding: 8px 8px;
   scrollbar-width: none;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .edit-studio-filters-carousel::-webkit-scrollbar {
   display: none;
+}
+
+/* Scroll pointers (end chevrons) & edge fades */
+.filters-scroll-fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 38px;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.filters-scroll-fade.left {
+  left: 0;
+  background: linear-gradient(to right, #ffffff 40%, rgba(255, 255, 255, 0));
+}
+
+.filters-scroll-fade.right {
+  right: 0;
+  background: linear-gradient(to left, #ffffff 40%, rgba(255, 255, 255, 0));
+}
+
+.filters-scroll-fade.visible {
+  opacity: 1;
+}
+
+.filters-scroll-btn {
+  position: absolute;
+  top: 34px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.12), 0 1px 2px rgba(15, 23, 42, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #475569;
+  z-index: 10;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.filters-scroll-btn.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.filters-scroll-btn.left {
+  left: 2px;
+}
+
+.filters-scroll-btn.right {
+  right: 2px;
+}
+
+.filters-scroll-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.18);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.filters-scroll-btn:active {
+  transform: translateY(-50%) scale(0.95);
+  background: #f1f5f9;
 }
 
 .edit-studio-filter-item {
@@ -1240,17 +1342,28 @@
   color: #ffffff;
 }
 
+.edit-studio-resize-options-row,
 .edit-studio-format-selector-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 2px;
+  margin-top: 4px;
+  width: 100%;
+  padding-left: 3px;
 }
 
+.edit-studio-resize-option-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.edit-studio-resize-option-group .edit-studio-pill-segmented,
 .edit-studio-format-selector-row .edit-studio-pill-segmented {
   padding: 2px;
 }
 
+.edit-studio-resize-option-group .edit-studio-pill-option,
 .edit-studio-format-selector-row .edit-studio-pill-option {
   padding: 3px 10px;
   font-size: 11px;
@@ -1260,6 +1373,11 @@
   font-size: 11px;
   color: #64748b;
   font-weight: 600;
+}
+
+.edit-studio-resize-crop-frame.is-fit-mode {
+  border-style: solid;
+  border-color: rgba(15, 23, 42, 0.35);
 }
 
 /* Freemium Banner */

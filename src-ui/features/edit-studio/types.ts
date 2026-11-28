@@ -48,6 +48,8 @@ export type ExportFormat = "png" | "jpg" | "webp";
 
 export type ResizePreset = "square" | "story" | "product" | "original" | "custom";
 
+export type FitMode = "fill" | "fit";
+
 export interface ResizeConfig {
   width: number;
   height: number;
@@ -56,6 +58,7 @@ export interface ResizeConfig {
   lockAspect: boolean;
   preset: ResizePreset;
   format: ExportFormat;
+  fitMode?: FitMode;
 }
 
 export interface RemoveState {

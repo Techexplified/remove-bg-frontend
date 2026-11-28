@@ -81,6 +81,7 @@ export function EditStudioScreen() {
     lockAspect: true,
     preset: "original",
     format: "png",
+    fitMode: "fill",
   };
 
   const initialSnapshot: EditSnapshot = {
@@ -302,20 +303,44 @@ export function EditStudioScreen() {
         const origH = fgImg.naturalHeight;
         const origRatio = origW / origH;
         const targetRatio = targetW / targetH;
-        let sx = 0,
-          sy = 0,
-          sw = origW,
-          sh = origH;
-        if (Math.abs(origRatio - targetRatio) > 0.01) {
-          if (targetRatio > origRatio) {
-            sh = origW / targetRatio;
-            sy = (origH - sh) / 2;
-          } else {
-            sw = origH * targetRatio;
-            sx = (origW - sw) / 2;
+        const fitMode = current.resize.fitMode || "fill";
+
+        if (fitMode === "fit") {
+          // FIT MODE: Entire image is preserved, centered on target canvas
+          let dw = targetW;
+          let dh = targetH;
+          let dx = 0;
+          let dy = 0;
+
+          if (Math.abs(origRatio - targetRatio) > 0.01) {
+            if (targetRatio > origRatio) {
+              // Canvas is wider than image -> pillarbox (centered horizontally)
+              dw = targetH * origRatio;
+              dx = (targetW - dw) / 2;
+            } else {
+              // Canvas is taller than image -> letterbox (centered vertically)
+              dh = targetW / origRatio;
+              dy = (targetH - dh) / 2;
+            }
           }
+          fgCtx.drawImage(fgImg, 0, 0, origW, origH, dx, dy, dw, dh);
+        } else {
+          // FILL MODE: Zoom and crop to fill target canvas
+          let sx = 0,
+            sy = 0,
+            sw = origW,
+            sh = origH;
+          if (Math.abs(origRatio - targetRatio) > 0.01) {
+            if (targetRatio > origRatio) {
+              sh = origW / targetRatio;
+              sy = (origH - sh) / 2;
+            } else {
+              sw = origH * targetRatio;
+              sx = (origW - sw) / 2;
+            }
+          }
+          fgCtx.drawImage(fgImg, sx, sy, sw, sh, 0, 0, targetW, targetH);
         }
-        fgCtx.drawImage(fgImg, sx, sy, sw, sh, 0, 0, targetW, targetH);
         fgCtx.restore();
         resolve();
       };
@@ -334,20 +359,40 @@ export function EditStudioScreen() {
           const origH = maskImg.naturalHeight;
           const origRatio = origW / origH;
           const targetRatio = targetW / targetH;
-          let sx = 0,
-            sy = 0,
-            sw = origW,
-            sh = origH;
-          if (Math.abs(origRatio - targetRatio) > 0.01) {
-            if (targetRatio > origRatio) {
-              sh = origW / targetRatio;
-              sy = (origH - sh) / 2;
-            } else {
-              sw = origH * targetRatio;
-              sx = (origW - sw) / 2;
+          const fitMode = current.resize.fitMode || "fill";
+
+          if (fitMode === "fit") {
+            let dw = targetW;
+            let dh = targetH;
+            let dx = 0;
+            let dy = 0;
+
+            if (Math.abs(origRatio - targetRatio) > 0.01) {
+              if (targetRatio > origRatio) {
+                dw = targetH * origRatio;
+                dx = (targetW - dw) / 2;
+              } else {
+                dh = targetW / origRatio;
+                dy = (targetH - dh) / 2;
+              }
             }
+            fgCtx.drawImage(maskImg, 0, 0, origW, origH, dx, dy, dw, dh);
+          } else {
+            let sx = 0,
+              sy = 0,
+              sw = origW,
+              sh = origH;
+            if (Math.abs(origRatio - targetRatio) > 0.01) {
+              if (targetRatio > origRatio) {
+                sh = origW / targetRatio;
+                sy = (origH - sh) / 2;
+              } else {
+                sw = origH * targetRatio;
+                sx = (origW - sw) / 2;
+              }
+            }
+            fgCtx.drawImage(maskImg, sx, sy, sw, sh, 0, 0, targetW, targetH);
           }
-          fgCtx.drawImage(maskImg, sx, sy, sw, sh, 0, 0, targetW, targetH);
           fgCtx.restore();
           resolve();
         };

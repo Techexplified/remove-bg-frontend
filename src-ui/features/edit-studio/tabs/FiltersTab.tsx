@@ -1,3 +1,5 @@
+import { useState, useRef, useEffect, useCallback } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { StudioSlider } from "../components/StudioSlider";
 import type { FilterConfig, FilterPresetId } from "../types";
 
@@ -98,6 +100,48 @@ export function FiltersTab({ filter, previewUrl, onChange, onCommit }: Props) {
     strength: typeof filter?.strength === "number" ? filter.strength : 100,
   };
 
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollPointers = useCallback(() => {
+    const el = carouselRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    // 2px threshold handles subpixel rendering variations
+    setCanScrollLeft(scrollLeft > 2);
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 2);
+  }, []);
+
+  useEffect(() => {
+    const el = carouselRef.current;
+    if (!el) return;
+
+    updateScrollPointers();
+
+    el.addEventListener("scroll", updateScrollPointers, { passive: true });
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateScrollPointers();
+    });
+    resizeObserver.observe(el);
+
+    return () => {
+      el.removeEventListener("scroll", updateScrollPointers);
+      resizeObserver.disconnect();
+    };
+  }, [updateScrollPointers]);
+
+  const handleScroll = (direction: "left" | "right") => {
+    const el = carouselRef.current;
+    if (!el) return;
+    const distance = 136; // Scrolls ~2 filter cards smoothly
+    el.scrollBy({
+      left: direction === "right" ? distance : -distance,
+      behavior: "smooth",
+    });
+  };
+
   const handleSelect = (id: FilterPresetId) => {
     const strength = id === "original" ? 100 : (safeFilter.strength === 0 ? 100 : safeFilter.strength);
     const updated = { id, strength };
@@ -118,29 +162,55 @@ export function FiltersTab({ filter, previewUrl, onChange, onCommit }: Props) {
 
   return (
     <div className="edit-studio-tab-panel edit-studio-tab-panel-filters">
-      {/* Horizontal Carousel of Filters */}
-      <div className="edit-studio-filters-carousel">
-        {FILTER_PRESETS.map((preset) => {
-          const isSelected = safeFilter.id === preset.id;
-          const thumbFilter = getFilterCss(preset.id, 100);
-          return (
-            <button
-              key={preset.id}
-              type="button"
-              className={`edit-studio-filter-item ${isSelected ? "selected" : ""}`}
-              onClick={() => handleSelect(preset.id)}
-            >
-              <div
-                className="edit-studio-filter-thumb"
-                style={{
-                  backgroundImage: previewUrl ? `url(${previewUrl})` : undefined,
-                  filter: thumbFilter || undefined,
-                }}
-              />
-              <span className="edit-studio-filter-name">{preset.label}</span>
-            </button>
-          );
-        })}
+      {/* Horizontal Carousel of Filters with Scroll Pointers */}
+      <div className="edit-studio-filters-carousel-wrapper">
+        <div className={`filters-scroll-fade left ${canScrollLeft ? "visible" : ""}`} />
+        <button
+          type="button"
+          className={`filters-scroll-btn left ${canScrollLeft ? "visible" : ""}`}
+          onClick={() => handleScroll("left")}
+          aria-label="Scroll filters left"
+          tabIndex={canScrollLeft ? 0 : -1}
+          aria-hidden={!canScrollLeft}
+        >
+          <ChevronLeft size={14} strokeWidth={2.4} />
+        </button>
+
+        <div ref={carouselRef} className="edit-studio-filters-carousel">
+          {FILTER_PRESETS.map((preset) => {
+            const isSelected = safeFilter.id === preset.id;
+            const thumbFilter = getFilterCss(preset.id, 100);
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                className={`edit-studio-filter-item ${isSelected ? "selected" : ""}`}
+                onClick={() => handleSelect(preset.id)}
+              >
+                <div
+                  className="edit-studio-filter-thumb"
+                  style={{
+                    backgroundImage: previewUrl ? `url(${previewUrl})` : undefined,
+                    filter: thumbFilter || undefined,
+                  }}
+                />
+                <span className="edit-studio-filter-name">{preset.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className={`filters-scroll-fade right ${canScrollRight ? "visible" : ""}`} />
+        <button
+          type="button"
+          className={`filters-scroll-btn right ${canScrollRight ? "visible" : ""}`}
+          onClick={() => handleScroll("right")}
+          aria-label="Scroll filters right"
+          tabIndex={canScrollRight ? 0 : -1}
+          aria-hidden={!canScrollRight}
+        >
+          <ChevronRight size={14} strokeWidth={2.4} />
+        </button>
       </div>
 
       {/* Strength Slider */}

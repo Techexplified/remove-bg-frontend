@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, Unlink } from "lucide-react";
-import type { ResizeConfig, ResizePreset, ExportFormat } from "../types";
+import type { ResizeConfig, ResizePreset, ExportFormat, FitMode } from "../types";
 
 interface Props {
   resize: ResizeConfig;
@@ -18,6 +18,22 @@ export function ResizeTab({ resize, onChange, onCommit }: Props) {
   const [mode, setMode] = useState<"ready-made" | "custom">(() =>
     resize.preset === "custom" ? "custom" : "ready-made"
   );
+
+  // Store the active aspect ratio so clearing input fields doesn't lose the ratio
+  const ratioRef = useRef<number>(
+    resize.height && resize.width
+      ? resize.height / resize.width
+      : resize.originalHeight && resize.originalWidth
+      ? resize.originalHeight / resize.originalWidth
+      : 1
+  );
+
+  // Update ratio whenever both dimensions are positive numbers
+  useEffect(() => {
+    if (resize.width > 0 && resize.height > 0) {
+      ratioRef.current = resize.height / resize.width;
+    }
+  }, [resize.width, resize.height]);
 
   const handleModeChange = (newMode: "ready-made" | "custom") => {
     setMode(newMode);
@@ -39,6 +55,9 @@ export function ResizeTab({ resize, onChange, onCommit }: Props) {
         width: resize.originalWidth,
         height: resize.originalHeight,
       };
+      if (resize.originalWidth > 0 && resize.originalHeight > 0) {
+        ratioRef.current = resize.originalHeight / resize.originalWidth;
+      }
     } else {
       const match = PRESETS.find((p) => p.id === presetId);
       if (match) {
@@ -48,6 +67,7 @@ export function ResizeTab({ resize, onChange, onCommit }: Props) {
           width: match.width,
           height: match.height,
         };
+        ratioRef.current = match.height / match.width;
       } else {
         updated = resize;
       }
@@ -57,13 +77,30 @@ export function ResizeTab({ resize, onChange, onCommit }: Props) {
   };
 
   const handleWidthChange = (w: number) => {
-    if (resize.lockAspect && resize.width > 0) {
-      const ratio = resize.height / resize.width;
+    if (w <= 0) {
+      // Emptying width input
+      onChange({
+        ...resize,
+        preset: "custom",
+        width: 0,
+      });
+      return;
+    }
+
+    const currentRatio =
+      ratioRef.current > 0
+        ? ratioRef.current
+        : resize.originalHeight && resize.originalWidth
+        ? resize.originalHeight / resize.originalWidth
+        : 1;
+
+    if (resize.lockAspect) {
+      const computedHeight = Math.max(1, Math.round(w * currentRatio));
       onChange({
         ...resize,
         preset: "custom",
         width: w,
-        height: Math.round(w * ratio),
+        height: computedHeight,
       });
     } else {
       onChange({
@@ -75,13 +112,30 @@ export function ResizeTab({ resize, onChange, onCommit }: Props) {
   };
 
   const handleHeightChange = (h: number) => {
-    if (resize.lockAspect && resize.height > 0) {
-      const ratio = resize.width / resize.height;
+    if (h <= 0) {
+      // Emptying height input
+      onChange({
+        ...resize,
+        preset: "custom",
+        height: 0,
+      });
+      return;
+    }
+
+    const currentRatio =
+      ratioRef.current > 0
+        ? ratioRef.current
+        : resize.originalHeight && resize.originalWidth
+        ? resize.originalHeight / resize.originalWidth
+        : 1;
+
+    if (resize.lockAspect) {
+      const computedWidth = Math.max(1, Math.round(h / currentRatio));
       onChange({
         ...resize,
         preset: "custom",
         height: h,
-        width: Math.round(h * ratio),
+        width: computedWidth,
       });
     } else {
       onChange({
@@ -92,12 +146,70 @@ export function ResizeTab({ resize, onChange, onCommit }: Props) {
     }
   };
 
+  const handleWidthBlur = () => {
+    if (!resize.width || resize.width < 32) {
+      const currentRatio = ratioRef.current > 0 ? ratioRef.current : 1;
+      const fallbackW =
+        resize.height > 0
+          ? Math.max(32, Math.round(resize.height / currentRatio))
+          : resize.originalWidth || 800;
+      const updated = {
+        ...resize,
+        width: fallbackW,
+        height:
+          resize.lockAspect && (!resize.height || resize.height < 32)
+            ? Math.max(32, Math.round(fallbackW * currentRatio))
+            : resize.height || resize.originalHeight || 800,
+      };
+      onChange(updated);
+      onCommit(updated);
+    } else {
+      onCommit(resize);
+    }
+  };
+
+  const handleHeightBlur = () => {
+    if (!resize.height || resize.height < 32) {
+      const currentRatio = ratioRef.current > 0 ? ratioRef.current : 1;
+      const fallbackH =
+        resize.width > 0
+          ? Math.max(32, Math.round(resize.width * currentRatio))
+          : resize.originalHeight || 800;
+      const updated = {
+        ...resize,
+        height: fallbackH,
+        width:
+          resize.lockAspect && (!resize.width || resize.width < 32)
+            ? Math.max(32, Math.round(fallbackH / currentRatio))
+            : resize.width || resize.originalWidth || 800,
+      };
+      onChange(updated);
+      onCommit(updated);
+    } else {
+      onCommit(resize);
+    }
+  };
+
   const handleToggleLock = () => {
-    onChange({ ...resize, lockAspect: !resize.lockAspect });
+    const nextLocked = !resize.lockAspect;
+    if (nextLocked) {
+      if (resize.width > 0 && resize.height > 0) {
+        ratioRef.current = resize.height / resize.width;
+      } else if (resize.originalWidth > 0 && resize.originalHeight > 0) {
+        ratioRef.current = resize.originalHeight / resize.originalWidth;
+      }
+    }
+    onChange({ ...resize, lockAspect: nextLocked });
   };
 
   const handleFormatChange = (format: ExportFormat) => {
     const updated = { ...resize, format };
+    onChange(updated);
+    onCommit(updated);
+  };
+
+  const handleFitModeChange = (fitMode: FitMode) => {
+    const updated = { ...resize, fitMode };
     onChange(updated);
     onCommit(updated);
   };
@@ -168,7 +280,7 @@ export function ResizeTab({ resize, onChange, onCommit }: Props) {
                 max={8000}
                 value={resize.width || ""}
                 onChange={(e) => handleWidthChange(Number(e.target.value))}
-                onBlur={() => onCommit(resize)}
+                onBlur={handleWidthBlur}
               />
               <span>px</span>
             </div>
@@ -192,7 +304,7 @@ export function ResizeTab({ resize, onChange, onCommit }: Props) {
                 max={8000}
                 value={resize.height || ""}
                 onChange={(e) => handleHeightChange(Number(e.target.value))}
-                onBlur={() => onCommit(resize)}
+                onBlur={handleHeightBlur}
               />
               <span>px</span>
             </div>
@@ -200,20 +312,44 @@ export function ResizeTab({ resize, onChange, onCommit }: Props) {
         </div>
       )}
 
-      {/* Shared: Format Selector */}
-      <div className="edit-studio-format-selector-row">
-        <span className="edit-studio-format-label">Format</span>
-        <div className="edit-studio-pill-segmented">
-          {(["png", "jpg", "webp"] as ExportFormat[]).map((fmt) => (
+      {/* Shared: Output Options Row (Fitting & Format) */}
+      <div className="edit-studio-resize-options-row">
+        {/* Left: Fitting (Fill vs Fit) */}
+        <div className="edit-studio-resize-option-group">
+          <span className="edit-studio-format-label">Fitting</span>
+          <div className="edit-studio-pill-segmented">
             <button
-              key={fmt}
               type="button"
-              className={`edit-studio-pill-option ${resize.format === fmt ? "active" : ""}`}
-              onClick={() => handleFormatChange(fmt)}
+              className={`edit-studio-pill-option ${(resize.fitMode || "fill") === "fill" ? "active" : ""}`}
+              onClick={() => handleFitModeChange("fill")}
             >
-              <span>{fmt.toUpperCase()}</span>
+              <span>Fill</span>
             </button>
-          ))}
+            <button
+              type="button"
+              className={`edit-studio-pill-option ${resize.fitMode === "fit" ? "active" : ""}`}
+              onClick={() => handleFitModeChange("fit")}
+            >
+              <span>Fit</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Right: Format Selector */}
+        <div className="edit-studio-resize-option-group">
+          <span className="edit-studio-format-label">Format</span>
+          <div className="edit-studio-pill-segmented">
+            {(["png", "jpg", "webp"] as ExportFormat[]).map((fmt) => (
+              <button
+                key={fmt}
+                type="button"
+                className={`edit-studio-pill-option ${resize.format === fmt ? "active" : ""}`}
+                onClick={() => handleFormatChange(fmt)}
+              >
+                <span>{fmt.toUpperCase()}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

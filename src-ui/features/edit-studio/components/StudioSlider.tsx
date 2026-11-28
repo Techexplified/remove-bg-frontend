@@ -23,9 +23,19 @@ export function StudioSlider({
 }: StudioSliderProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [localValue, setLocalValue] = useState<number>(() =>
     typeof value === "number" ? value : min
   );
+
+  const valueRef = useRef(value);
+  valueRef.current = value;
+
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  const onCommitRef = useRef(onCommit);
+  onCommitRef.current = onCommit;
 
   // Sync from prop when not actively dragging
   useEffect(() => {
@@ -36,9 +46,9 @@ export function StudioSlider({
 
   const calculateValueFromPointer = useCallback(
     (clientX: number): number => {
-      if (!containerRef.current) return localValue;
+      if (!containerRef.current) return valueRef.current;
       const rect = containerRef.current.getBoundingClientRect();
-      if (rect.width <= 0) return localValue;
+      if (rect.width <= 0) return valueRef.current;
 
       const clampedX = Math.max(0, Math.min(rect.width, clientX - rect.left));
       const ratio = clampedX / rect.width;
@@ -46,60 +56,66 @@ export function StudioSlider({
       const stepped = Math.round(raw / step) * step;
       return Math.max(min, Math.min(max, stepped));
     },
-    [min, max, step, localValue]
+    [min, max, step]
   );
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0 && e.pointerType === "mouse") return;
     e.preventDefault();
     isDraggingRef.current = true;
+    setIsDragging(true);
 
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch (_) {
-      // In case pointer capture fails in older webviews
-    }
+    const initialVal = calculateValueFromPointer(e.clientX);
+    setLocalValue(initialVal);
+    onChangeRef.current(initialVal);
 
-    const newVal = calculateValueFromPointer(e.clientX);
-    setLocalValue(newVal);
-    onChange(newVal);
-  };
+    let rafId: number | null = null;
+    let latestClientX = e.clientX;
 
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDraggingRef.current) return;
-    e.preventDefault();
-    const newVal = calculateValueFromPointer(e.clientX);
-    setLocalValue(newVal);
-    onChange(newVal);
-  };
+    const onPointerMove = (ev: PointerEvent) => {
+      if (!isDraggingRef.current) return;
+      ev.preventDefault();
+      latestClientX = ev.clientX;
 
-  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDraggingRef.current) return;
-    isDraggingRef.current = false;
-
-    try {
-      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-        e.currentTarget.releasePointerCapture(e.pointerId);
+      if (rafId === null) {
+        rafId = requestAnimationFrame(() => {
+          rafId = null;
+          if (!isDraggingRef.current) return;
+          const updatedVal = calculateValueFromPointer(latestClientX);
+          setLocalValue(updatedVal);
+          onChangeRef.current(updatedVal);
+        });
       }
-    } catch (_) {}
+    };
 
-    const finalVal = calculateValueFromPointer(e.clientX);
-    setLocalValue(finalVal);
-    onChange(finalVal);
-    onCommit?.(finalVal);
-  };
+    const handleEnd = () => {
+      if (!isDraggingRef.current) return;
+      isDraggingRef.current = false;
+      setIsDragging(false);
 
-  const handlePointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDraggingRef.current) return;
-    isDraggingRef.current = false;
-
-    try {
-      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-        e.currentTarget.releasePointerCapture(e.pointerId);
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
       }
-    } catch (_) {}
 
-    onCommit?.(localValue);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+      window.removeEventListener("blur", handleEnd);
+    };
+
+    const onPointerUp = (ev: PointerEvent) => {
+      const finalVal = calculateValueFromPointer(ev.clientX);
+      handleEnd();
+      setLocalValue(finalVal);
+      onChangeRef.current(finalVal);
+      onCommitRef.current?.(finalVal);
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
+    window.addEventListener("blur", handleEnd);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -127,7 +143,7 @@ export function StudioSlider({
   return (
     <div
       ref={containerRef}
-      className={`studio-slider-container ${className}`}
+      className={`studio-slider-container ${isDragging ? "is-dragging" : ""} ${className}`}
       role="slider"
       tabIndex={0}
       aria-valuemin={min}
@@ -135,9 +151,6 @@ export function StudioSlider({
       aria-valuenow={localValue}
       aria-label={ariaLabel}
       onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerCancel}
       onKeyDown={handleKeyDown}
     >
       <div className="studio-slider-rail">

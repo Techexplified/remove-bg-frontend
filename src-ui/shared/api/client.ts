@@ -119,6 +119,17 @@ export async function fetchPlanStatus(): Promise<PlanStatus> {
     feedbackPromptsEnabled: d.feedback_prompts_enabled ?? true,
     reviewPromptShown: d.review_prompt_shown ?? false,
   };
+
+  // --- DEV OVERRIDE (Set to true to simulate Starter plan; false for real backend) ---
+  const DEV_SIMULATE_STARTER = false;
+  if (DEV_SIMULATE_STARTER) {
+    status.plan = "starter";
+    status.isActive = true;
+    status.credits = 14;
+    status.canBuyTopup = true;
+    status.daysLeft = 24;
+  }
+
   if (status.sessionToken) storeSessionToken(status.sessionToken);
   return status;
 }

@@ -249,7 +249,7 @@ export function AccountScreen({
             <ChevronRight size={15} strokeWidth={2.2} className="v2-menu-row-chevron" />
           </button>
 
-          <button
+          {/* <button
             type="button"
             className="v2-menu-row"
             onClick={() => onNavigateTab?.("feedback")}
@@ -261,7 +261,7 @@ export function AccountScreen({
               <span className="v2-menu-row-label">Feedback & Preferences</span>
             </div>
             <ChevronRight size={15} strokeWidth={2.2} className="v2-menu-row-chevron" />
-          </button>
+          </button> */}
 
           <button
             type="button"
