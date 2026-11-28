@@ -1,7 +1,14 @@
-import { RefreshCw, Check, ChevronRight, ChevronLeft, HelpCircle, Star, FileText } from "lucide-react";
+import { useState } from "react";
+import { RefreshCw, Check, ChevronRight, ChevronLeft, HelpCircle, FileText } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { loadPlanStatus } from "../../app/slices/statusSlice";
-import { fetchManagePlanUrls } from "../../shared/api/client";
+import { addToast } from "../../app/slices/uiSlice";
+import {
+  fetchManagePlanUrls,
+  cancelSubscription,
+  reactivateSubscription,
+  ApiError,
+} from "../../shared/api/client";
 import { PLAN_LIMITS } from "../../shared/types/featureData";
 
 interface Props {
@@ -44,6 +51,76 @@ export function AccountScreen({
   const refetch = () => dispatch(loadPlanStatus());
   const displayName = useAppSelector((s) => s.figma.displayName);
   const userId = useAppSelector((s) => s.figma.userId);
+  const [submittingAction, setSubmittingAction] = useState<"cancel" | "reactivate" | null>(null);
+
+  async function handleCancel() {
+    if (
+      !window.confirm(
+        "Are you sure you want to cancel your Starter subscription? You will keep your remaining images and access until the end of the current billing cycle."
+      )
+    ) {
+      return;
+    }
+    setSubmittingAction("cancel");
+    try {
+      const res = await cancelSubscription();
+      await dispatch(loadPlanStatus());
+      dispatch(
+        addToast({
+          id: `toast_cancel_${Date.now()}`,
+          kind: "warning",
+          title: "Cancellation scheduled",
+          message:
+            res.message ||
+            `Your subscription will cancel at the end of the billing period.`,
+        })
+      );
+    } catch (err) {
+      dispatch(
+        addToast({
+          id: `toast_cancel_err_${Date.now()}`,
+          kind: "error",
+          title: "Cancel failed",
+          message:
+            err instanceof ApiError
+              ? err.message
+              : "Could not cancel subscription.",
+        })
+      );
+    } finally {
+      setSubmittingAction(null);
+    }
+  }
+
+  async function handleReactivate() {
+    setSubmittingAction("reactivate");
+    try {
+      const res = await reactivateSubscription();
+      await dispatch(loadPlanStatus());
+      dispatch(
+        addToast({
+          id: `toast_reactivate_${Date.now()}`,
+          kind: "success",
+          title: "Subscription reactivated",
+          message: res.message || "Your subscription has been reactivated.",
+        })
+      );
+    } catch (err) {
+      dispatch(
+        addToast({
+          id: `toast_reactivate_err_${Date.now()}`,
+          kind: "error",
+          title: "Reactivate failed",
+          message:
+            err instanceof ApiError
+              ? err.message
+              : "Could not reactivate subscription.",
+        })
+      );
+    } finally {
+      setSubmittingAction(null);
+    }
+  }
 
   async function handleManageBilling() {
     try {
@@ -229,6 +306,33 @@ export function AccountScreen({
               >
                 Manage Billing & Invoice
               </button>
+            </div>
+
+            {/* Cancel or Reactivate Subscription */}
+            <div className="v2-sub-secondary-actions-row">
+              {isCancelling ? (
+                <button
+                  type="button"
+                  className="v2-reactivate-btn"
+                  onClick={handleReactivate}
+                  disabled={submittingAction !== null}
+                >
+                  {submittingAction === "reactivate"
+                    ? "Reactivating..."
+                    : "Reactivate Subscription"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="v2-cancel-plan-btn"
+                  onClick={handleCancel}
+                  disabled={submittingAction !== null}
+                >
+                  {submittingAction === "cancel"
+                    ? "Cancelling..."
+                    : "Cancel Subscription"}
+                </button>
+              )}
             </div>
           </div>
         )}

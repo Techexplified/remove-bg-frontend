@@ -2,8 +2,14 @@ import { useState } from "react";
 import { X, AlertTriangle, Calendar, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
-import { closeModal, setShowExitIntent } from "../../../app/slices/uiSlice";
-import { initCheckout } from "../../../app/slices/statusSlice";
+import { closeModal, setShowExitIntent, addToast } from "../../../app/slices/uiSlice";
+import { initCheckout, loadPlanStatus } from "../../../app/slices/statusSlice";
+import {
+  cancelSubscription,
+  reactivateSubscription,
+  fetchManagePlanUrls,
+  ApiError,
+} from "../../api/client";
 
 interface Props {
   onCheckoutOpen: (url: string, type: "plan") => void;
@@ -30,6 +36,7 @@ export function PlanPickerModal({ onCheckoutOpen, onScheduled }: Props) {
   const isCancelling = !!status?.scheduledCancelAt;
   const isDowngradeScheduled = status?.scheduledPlanChange === "starter";
   const renewLabel = fmtDate(status?.subscriptionEndsAt);
+  const cancelLabel = fmtDate(status?.scheduledCancelAt);
 
   const spendable = !status
     ? 0
@@ -203,32 +210,244 @@ export function PlanPickerModal({ onCheckoutOpen, onScheduled }: Props) {
     );
   }
 
-  // ─── State: Starter user
-  if (plan === "starter" && !isCancelling) {
+  // ─── State: Starter user (Active or Cancelling)
+  if (plan === "starter") {
     return (
       <AnimatePresence>
-        <motion.div className="modal-overlay" style={overlayStyle} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          onClick={() => dispatch(closeModal())}>
-          <motion.div className="modal" initial={{ scale: .93, y: 8 }} animate={{ scale: 1, y: 0 }}
-            onClick={e => e.stopPropagation()} style={{ maxWidth: 330 }}>
+        <motion.div
+          className="modal-overlay"
+          style={overlayStyle}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => dispatch(closeModal())}
+        >
+          <motion.div
+            className="modal"
+            initial={{ scale: 0.93, y: 8 }}
+            animate={{ scale: 1, y: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 330 }}
+          >
             <div className="modal-head">
               <div>
                 <div className="modal-title">Your Plan</div>
-                <div className="modal-sub">You're on the Starter plan</div>
+                <div className="modal-sub">
+                  {isCancelling ? "Cancellation scheduled" : "You're on the Starter plan"}
+                </div>
               </div>
-              <button className="modal-close" onClick={() => dispatch(closeModal())} style={{ color: "var(--c-text-3)" }}><X size={16} /></button>
+              <button
+                className="modal-close"
+                onClick={() => dispatch(closeModal())}
+                style={{ color: "var(--c-text-3)" }}
+              >
+                <X size={16} />
+              </button>
             </div>
-            <div className="modal-body" style={{ gap: "12px" }}>
-              <div style={{ background: "var(--c-bg-2)", borderRadius: "12px", border: "1px solid var(--c-border)", padding: "14px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                  <span style={{ fontSize: "10px", fontWeight: "700", padding: "3px 9px", background: "rgba(108,71,255,.08)", borderRadius: "100px", color: "var(--brand)", textTransform: "uppercase" }}>★ Starter Plan</span>
+            <div className="modal-body" style={{ gap: "10px" }}>
+              <div
+                style={{
+                  background: isCancelling ? "#fffbeb" : "var(--c-bg-2)",
+                  borderRadius: "12px",
+                  border: isCancelling ? "1px solid #fde68a" : "1px solid var(--c-border)",
+                  padding: "14px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "8px",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "10px",
+                      fontWeight: "700",
+                      padding: "3px 9px",
+                      background: isCancelling ? "rgba(245,158,11,.15)" : "rgba(108,71,255,.08)",
+                      borderRadius: "100px",
+                      color: isCancelling ? "#b45309" : "var(--brand)",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {isCancelling ? "⚠ Cancelling" : "★ Starter Plan"}
+                  </span>
                   <span style={{ fontSize: "11px", color: "var(--c-text-2)" }}>$5/month</span>
                 </div>
-                <div style={{ fontSize: "10.5px", color: "var(--c-text-3)", lineHeight: "1.5" }}>
-                  Renews {renewLabel ?? "next billing date"} · 50 images/month
+                <div
+                  style={{
+                    fontSize: "10.5px",
+                    color: isCancelling ? "#92400e" : "var(--c-text-3)",
+                    lineHeight: "1.5",
+                  }}
+                >
+                  {isCancelling
+                    ? `Cancels on ${cancelLabel ?? "end of billing cycle"}. Your credits remain active until then.`
+                    : `Renews ${renewLabel ?? "next billing date"} · 50 images/month`}
                 </div>
               </div>
-              <button onClick={() => dispatch(closeModal())} style={{ width: "100%", background: "var(--c-bg-2)", border: "1px solid var(--c-border)", color: "var(--c-text-2)", padding: "10px", borderRadius: "10px", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>
+
+              {/* In-Modal Billing & Cancellation / Reactivation Actions */}
+              {isCancelling ? (
+                <button
+                  type="button"
+                  style={{
+                    width: "100%",
+                    background: "#10b981",
+                    border: "none",
+                    color: "#ffffff",
+                    padding: "10px",
+                    borderRadius: "10px",
+                    fontSize: "12px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    transition: "background 0.15s ease",
+                  }}
+                  onClick={async () => {
+                    try {
+                      await reactivateSubscription();
+                      await dispatch(loadPlanStatus());
+                      dispatch(closeModal());
+                      dispatch(
+                        addToast({
+                          id: `reactivate_${Date.now()}`,
+                          kind: "success",
+                          title: "Subscription reactivated",
+                          message: "Your Starter subscription has been reactivated.",
+                        })
+                      );
+                    } catch (err) {
+                      dispatch(
+                        addToast({
+                          id: `reactivate_err_${Date.now()}`,
+                          kind: "error",
+                          title: "Reactivate failed",
+                          message:
+                            err instanceof ApiError ? err.message : "Could not reactivate.",
+                        })
+                      );
+                    }
+                  }}
+                >
+                  Reactivate Subscription
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    style={{
+                      width: "100%",
+                      background: "#0f172a",
+                      border: "none",
+                      color: "#ffffff",
+                      padding: "10px",
+                      borderRadius: "10px",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                    }}
+                    onClick={async () => {
+                      try {
+                        const urls = await fetchManagePlanUrls();
+                        if (urls.portalUrl) {
+                          window.open(urls.portalUrl, "_blank");
+                        } else {
+                          dispatch(
+                            addToast({
+                              id: `portal_err_${Date.now()}`,
+                              kind: "warning",
+                              title: "Billing Portal",
+                              message: "Billing portal URL not available.",
+                            })
+                          );
+                        }
+                      } catch {
+                        dispatch(
+                          addToast({
+                            id: `portal_err_${Date.now()}`,
+                            kind: "warning",
+                            title: "Billing Portal",
+                            message: "Could not open billing portal.",
+                          })
+                        );
+                      }
+                    }}
+                  >
+                    Manage Invoices & Billing
+                  </button>
+
+                  <button
+                    type="button"
+                    style={{
+                      width: "100%",
+                      background: "transparent",
+                      border: "1px solid #fecaca",
+                      color: "#dc2626",
+                      padding: "9px",
+                      borderRadius: "10px",
+                      fontSize: "11.5px",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                    onClick={async () => {
+                      if (
+                        !window.confirm(
+                          "Are you sure you want to cancel your Starter subscription? You will keep your access until the end of the billing period."
+                        )
+                      ) {
+                        return;
+                      }
+                      try {
+                        const res = await cancelSubscription();
+                        await dispatch(loadPlanStatus());
+                        dispatch(closeModal());
+                        dispatch(
+                          addToast({
+                            id: `cancel_${Date.now()}`,
+                            kind: "warning",
+                            title: "Cancellation scheduled",
+                            message:
+                              res.message ||
+                              "Your subscription will cancel at the end of the billing period.",
+                          })
+                        );
+                      } catch (err) {
+                        dispatch(
+                          addToast({
+                            id: `cancel_err_${Date.now()}`,
+                            kind: "error",
+                            title: "Cancel failed",
+                            message:
+                              err instanceof ApiError
+                                ? err.message
+                                : "Could not cancel subscription.",
+                          })
+                        );
+                      }
+                    }}
+                  >
+                    Cancel Subscription
+                  </button>
+                </>
+              )}
+
+              <button
+                onClick={() => dispatch(closeModal())}
+                style={{
+                  width: "100%",
+                  background: "var(--c-bg-2)",
+                  border: "1px solid var(--c-border)",
+                  color: "var(--c-text-2)",
+                  padding: "9px",
+                  borderRadius: "10px",
+                  fontSize: "12px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                }}
+              >
                 Close
               </button>
             </div>
