@@ -1,7 +1,9 @@
 import type { FeatureId, PlanStatus, ManagePlanUrls, CheckoutResponse, PackId, RunFeatureOptions, FeedbackPayload, PreferencesPayload } from "../types/api";
 
 // Confirmed against the handoff doc — the single source of truth for the base URL.
-const API_BASE_URL = "https://removebgapi-pf6diz22ka-uc.a.run.app";
+// PRODUCTION WARNING: Restore this production URL (and remove the ngrok URL + ngrok header below) before publishing!
+// const API_BASE_URL = "https://removebgapi-pf6diz22ka-uc.a.run.app";
+const API_BASE_URL = "https://tutor-kissable-captivity.ngrok-free.dev/explified-app/us-central1/removeBgApi"; // TEMP LOCAL TEST MODE (ngrok) — DO NOT SHIP TO PRODUCTION
 
 // Module-level token cache — NOT Redux state, NOT React state. This is the
 // crux of the fix: RTK Query's fetchBaseQuery re-derives its prepareHeaders
@@ -36,6 +38,7 @@ async function apiFetch(path: string, options: RequestInit = {}, isRetry = false
   const headers = new Headers(options.headers);
   headers.set("x-figma-user-id", getFigmaUserId());
   headers.set("x-figma-display-name", getFigmaDisplayName()); // required by backend
+  headers.set("ngrok-skip-browser-warning", "true"); // PRODUCTION WARNING: TEMP LOCAL NGROK HEADER — remove before publishing!
   if (cachedSessionToken) headers.set("Authorization", `Bearer ${cachedSessionToken}`);
 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers, cache: "no-store" });
@@ -50,6 +53,7 @@ async function apiFetch(path: string, options: RequestInit = {}, isRetry = false
         const retryHeaders = new Headers(options.headers);
         retryHeaders.set("x-figma-user-id", getFigmaUserId());
         retryHeaders.set("x-figma-display-name", getFigmaDisplayName());
+        retryHeaders.set("ngrok-skip-browser-warning", "true"); // PRODUCTION WARNING: TEMP LOCAL NGROK HEADER — remove before publishing!
         if (cachedSessionToken) retryHeaders.set("Authorization", `Bearer ${cachedSessionToken}`);
         return fetch(`${API_BASE_URL}${path}`, { ...options, headers: retryHeaders, cache: "no-store" });
       } catch {
@@ -62,6 +66,7 @@ async function apiFetch(path: string, options: RequestInit = {}, isRetry = false
       const retryHeaders = new Headers(options.headers);
       retryHeaders.set("x-figma-user-id", getFigmaUserId());
       retryHeaders.set("x-figma-display-name", getFigmaDisplayName());
+      retryHeaders.set("ngrok-skip-browser-warning", "true"); // PRODUCTION WARNING: TEMP LOCAL NGROK HEADER — remove before publishing!
       retryHeaders.delete("Authorization");
       return fetch(`${API_BASE_URL}${path}`, { ...options, headers: retryHeaders, cache: "no-store" });
     }
