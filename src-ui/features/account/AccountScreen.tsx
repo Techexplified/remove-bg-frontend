@@ -4,7 +4,6 @@ import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { loadPlanStatus } from "../../app/slices/statusSlice";
 import { addToast } from "../../app/slices/uiSlice";
 import {
-  fetchManagePlanUrls,
   cancelSubscription,
   reactivateSubscription,
   ApiError,
@@ -41,7 +40,7 @@ function SubRow({ label, value }: { label: string; value: React.ReactNode }) {
 export function AccountScreen({
   onManagePlan,
   onTopUp,
-  openExternal,
+  openExternal: _openExternal,
   onNavigateTab,
   onBackToHome,
 }: Props) {
@@ -122,17 +121,8 @@ export function AccountScreen({
     }
   }
 
-  async function handleManageBilling() {
-    try {
-      const urls = await fetchManagePlanUrls();
-      if (urls.portalUrl) {
-        openExternal(urls.portalUrl);
-      } else {
-        onManagePlan();
-      }
-    } catch {
-      onManagePlan();
-    }
+  function handleManageBilling() {
+    onManagePlan();
   }
 
   const plan = status?.plan ?? "free";

@@ -14,6 +14,7 @@ import {
 interface Props {
   onCheckoutOpen: (url: string, type: "plan") => void;
   onScheduled: (msg: string) => void;
+  openExternal?: (url: string) => void;
 }
 
 function fmtDate(v: string | null | undefined) {
@@ -22,7 +23,7 @@ function fmtDate(v: string | null | undefined) {
   return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function PlanPickerModal({ onCheckoutOpen, onScheduled }: Props) {
+export function PlanPickerModal({ onCheckoutOpen, onScheduled, openExternal }: Props) {
   const dispatch = useAppDispatch();
   const status = useAppSelector(s => s.status.data);
   const modalContext = useAppSelector(s => s.ui.modal.context);
@@ -82,6 +83,16 @@ export function PlanPickerModal({ onCheckoutOpen, onScheduled }: Props) {
     dispatch(closeModal());
     dispatch(setShowExitIntent(true));
   }
+
+  const handleOpenExternal = (url: string) => {
+    if (openExternal) {
+      openExternal(url);
+    } else if (typeof parent !== "undefined" && parent.postMessage) {
+      parent.postMessage({ pluginMessage: { type: "open-external", payload: url } }, "*");
+    } else {
+      window.open(url, "_blank");
+    }
+  };
 
   function handleApplyFreeEditsOnly() {
     dispatch(closeModal());
@@ -352,24 +363,27 @@ export function PlanPickerModal({ onCheckoutOpen, onScheduled }: Props) {
                       try {
                         const urls = await fetchManagePlanUrls();
                         if (urls.portalUrl) {
-                          window.open(urls.portalUrl, "_blank");
+                          handleOpenExternal(urls.portalUrl);
                         } else {
                           dispatch(
                             addToast({
                               id: `portal_err_${Date.now()}`,
                               kind: "warning",
                               title: "Billing Portal",
-                              message: "Billing portal URL not available.",
+                              message: "Billing portal URL not available for this account.",
                             })
                           );
                         }
-                      } catch {
+                      } catch (err) {
+                        console.error("fetchManagePlanUrls error:", err);
                         dispatch(
                           addToast({
                             id: `portal_err_${Date.now()}`,
-                            kind: "warning",
+                            kind: "error",
                             title: "Billing Portal",
-                            message: "Could not open billing portal.",
+                            message:
+                              (err as any)?.message ||
+                              "Could not open billing portal.",
                           })
                         );
                       }

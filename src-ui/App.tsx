@@ -480,6 +480,7 @@ function AppReady() {
         <PlanPickerModal
           onCheckoutOpen={handleCheckoutOpen}
           onScheduled={msg => toast("success", "Plan updated!", msg)}
+          openExternal={bridge.openExternal}
         />
       )}
       {modal.kind === "prompt" && <PromptModal onSubmit={handlePromptSubmit} />}

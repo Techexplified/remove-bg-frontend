@@ -148,7 +148,10 @@ export async function fetchManagePlanUrls(): Promise<ManagePlanUrls> {
     throw new ApiError(e.message, response.status, e.code);
   }
   const d = await response.json();
-  return { portalUrl: d.portal_url, cancelUrl: d.cancel_url, updatePaymentUrl: d.update_payment_url };
+  const portalUrl = d.portal_url || d.portalUrl || d.url || d.customer_portal_url || "";
+  const cancelUrl = d.cancel_url || d.cancelUrl || "";
+  const updatePaymentUrl = d.update_payment_url || d.updatePaymentUrl || "";
+  return { portalUrl, cancelUrl, updatePaymentUrl };
 }
 
 // ---- Checkout ----
